@@ -73,13 +73,13 @@ func TestAdapter_TextOnlyRound(t *testing.T) {
 	ctx := context.Background()
 	adapter, sink := newTestAdapter()
 
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
-	require.NoError(t, adapter.onDelta(ctx, elelem.Delta{Text: "hello"}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnDelta(ctx, elelem.Delta{Text: "hello"}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role:    elelem.RoleAssistant,
 		Content: elelem.Text("hello"),
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
 
 	events := decodeEvents(t, sink.Events())
 	require.Len(t, events, 3)
@@ -99,16 +99,16 @@ func TestAdapter_ThinkingThenText(t *testing.T) {
 	ctx := context.Background()
 	adapter, sink := newTestAdapter()
 
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
-	require.NoError(t, adapter.onDelta(
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnDelta(
 		ctx, elelem.Delta{Reasoning: "thinking..."},
 	))
-	require.NoError(t, adapter.onDelta(ctx, elelem.Delta{Text: "answer"}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnDelta(ctx, elelem.Delta{Text: "answer"}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role:    elelem.RoleAssistant,
 		Content: elelem.Text("answer"),
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
 
 	events := decodeEvents(t, sink.Events())
 	// thinking: start + delta + stop (index 0), text: start + delta + stop
@@ -131,8 +131,8 @@ func TestAdapter_OneToolCall(t *testing.T) {
 	ctx := context.Background()
 	adapter, sink := newTestAdapter()
 
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role: elelem.RoleAssistant,
 		ToolCalls: []elelem.ToolCall{
 			{
@@ -141,20 +141,20 @@ func TestAdapter_OneToolCall(t *testing.T) {
 			},
 		},
 	}))
-	require.NoError(t, adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 		CallID:    testCallID1,
 		Name:      testToolNameWeather,
 		Arguments: json.RawMessage(`{"city":"NYC"}`),
 		Index:     0,
 	}))
-	require.NoError(t, adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID:    testCallID1,
 		Name:      testToolNameWeather,
 		Arguments: json.RawMessage(`{"city":"NYC"}`),
 		Index:     0,
 		Result:    &elelem.ToolResult{Content: "sunny"},
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
 
 	events := decodeEvents(t, sink.Events())
 	// tool_use: start + delta + stop (index 0), tool_result: start + delta +
@@ -180,8 +180,8 @@ func TestAdapter_TwoParallelToolCalls_ThenSecondRound(t *testing.T) {
 	adapter, sink := newTestAdapter()
 
 	// Round 0: two parallel tool calls, no text/thinking content.
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role: elelem.RoleAssistant,
 		ToolCalls: []elelem.ToolCall{
 			{
@@ -194,21 +194,21 @@ func TestAdapter_TwoParallelToolCalls_ThenSecondRound(t *testing.T) {
 			},
 		},
 	}))
-	require.NoError(t, adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDA, Name: testToolNameA, Index: 0,
 	}))
-	require.NoError(t, adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDB, Name: testToolNameB, Index: 1,
 	}))
-	require.NoError(t, adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDA, Name: testToolNameA, Index: 0,
 		Result: &elelem.ToolResult{Content: "result a"},
 	}))
-	require.NoError(t, adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDB, Name: testToolNameB, Index: 1,
 		Result: &elelem.ToolResult{Content: "result b"},
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
 
 	events := decodeEvents(t, sink.Events())
 	require.Len(t, events, 12)
@@ -235,13 +235,13 @@ func TestAdapter_TwoParallelToolCalls_ThenSecondRound(t *testing.T) {
 
 	// Round 1 starts at the advanced index (toolBase=0, toolCallCount=2 =>
 	// blockIndex = 0 + 2*2 = 4), not back at 0 and not still at 1.
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 1}))
-	require.NoError(t, adapter.onDelta(ctx, elelem.Delta{Text: "final answer"}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 1}))
+	require.NoError(t, adapter.OnDelta(ctx, elelem.Delta{Text: "final answer"}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role:    elelem.RoleAssistant,
 		Content: elelem.Text("final answer"),
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 1}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 1}))
 
 	allEvents := decodeEvents(t, sink.Events())
 	require.Len(t, allEvents, 15)
@@ -271,11 +271,11 @@ func TestAdapter_TextThenParallelToolCalls_NonZeroToolBase(t *testing.T) {
 
 	// Round 0: text first (toolBase becomes 1 once it closes), then two
 	// parallel tool calls.
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
-	require.NoError(t, adapter.onDelta(
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnDelta(
 		ctx, elelem.Delta{Text: "let me check"},
 	))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role:    elelem.RoleAssistant,
 		Content: elelem.Text("let me check"),
 		ToolCalls: []elelem.ToolCall{
@@ -289,31 +289,31 @@ func TestAdapter_TextThenParallelToolCalls_NonZeroToolBase(t *testing.T) {
 			},
 		},
 	}))
-	require.NoError(t, adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDA, Name: testToolNameA, Index: 0,
 	}))
-	require.NoError(t, adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDB, Name: testToolNameB, Index: 1,
 	}))
-	require.NoError(t, adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDA, Name: testToolNameA, Index: 0,
 		Result: &elelem.ToolResult{Content: "result a"},
 	}))
-	require.NoError(t, adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	require.NoError(t, adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID: testCallIDB, Name: testToolNameB, Index: 1,
 		Result: &elelem.ToolResult{Content: "result b"},
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 0}))
 
 	// Round 1: text only, confirming blockIndex advanced past both tool
 	// blocks (toolBase 1 + 2*toolCallCount 2 == 5), not back to 0 or 1.
-	require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{Round: 1}))
-	require.NoError(t, adapter.onDelta(ctx, elelem.Delta{Text: "done"}))
-	require.NoError(t, adapter.onAssistantMessage(ctx, elelem.Message{
+	require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{Round: 1}))
+	require.NoError(t, adapter.OnDelta(ctx, elelem.Delta{Text: "done"}))
+	require.NoError(t, adapter.OnAssistantMessage(ctx, elelem.Message{
 		Role:    elelem.RoleAssistant,
 		Content: elelem.Text("done"),
 	}))
-	require.NoError(t, adapter.onRoundEnd(ctx, &elelem.RoundEvent{Round: 1}))
+	require.NoError(t, adapter.OnRoundEnd(ctx, &elelem.RoundEvent{Round: 1}))
 
 	events := decodeEvents(t, sink.Events())
 	require.Len(t, events, 18)
@@ -360,7 +360,7 @@ func TestAdapter_UninitializedRoundStream(t *testing.T) {
 		t.Parallel()
 
 		adapter, _ := newTestAdapter()
-		err := adapter.onDelta(context.Background(), elelem.Delta{Text: "x"})
+		err := adapter.OnDelta(context.Background(), elelem.Delta{Text: "x"})
 		require.Error(t, err)
 	})
 
@@ -368,7 +368,7 @@ func TestAdapter_UninitializedRoundStream(t *testing.T) {
 		t.Parallel()
 
 		adapter, _ := newTestAdapter()
-		err := adapter.onAssistantMessage(context.Background(), elelem.Message{
+		err := adapter.OnAssistantMessage(context.Background(), elelem.Message{
 			Role: elelem.RoleAssistant,
 		})
 		require.Error(t, err)
@@ -381,7 +381,7 @@ func TestAdapter_OnToolResult_MissingResult(t *testing.T) {
 	ctx := context.Background()
 	adapter, _ := newTestAdapter()
 
-	err := adapter.onToolResult(ctx, elelem.ToolCallEvent{
+	err := adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 		CallID: testCallID1, Name: testToolNameWeather, Index: 0,
 	})
 	require.Error(t, err)
@@ -404,9 +404,9 @@ func TestAdapter_PublishErrors_AreWrapped(t *testing.T) {
 		ctx := context.Background()
 		pub := essessey.NewPublisher(ctx, errSink{})
 		adapter := New(pub)
-		require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{}))
+		require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{}))
 
-		err := adapter.onDelta(ctx, elelem.Delta{Text: "hello"})
+		err := adapter.OnDelta(ctx, elelem.Delta{Text: "hello"})
 		require.Error(t, err)
 	})
 
@@ -416,9 +416,9 @@ func TestAdapter_PublishErrors_AreWrapped(t *testing.T) {
 		ctx := context.Background()
 		pub := essessey.NewPublisher(ctx, errSink{})
 		adapter := New(pub)
-		require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{}))
+		require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{}))
 
-		err := adapter.onDelta(ctx, elelem.Delta{Reasoning: "thinking"})
+		err := adapter.OnDelta(ctx, elelem.Delta{Reasoning: "thinking"})
 		require.Error(t, err)
 	})
 
@@ -428,12 +428,12 @@ func TestAdapter_PublishErrors_AreWrapped(t *testing.T) {
 		ctx := context.Background()
 		pub := essessey.NewPublisher(ctx, errSink{})
 		adapter := New(pub)
-		require.NoError(t, adapter.onRoundStart(ctx, &elelem.RoundEvent{}))
+		require.NoError(t, adapter.OnRoundStart(ctx, &elelem.RoundEvent{}))
 
 		// No content streamed this round, so finish() never opens a block —
 		// blocks open lazily, on first content — and the failing sink is
 		// never even called.
-		err := adapter.onAssistantMessage(ctx, elelem.Message{
+		err := adapter.OnAssistantMessage(ctx, elelem.Message{
 			Role: elelem.RoleAssistant,
 			ToolCalls: []elelem.ToolCall{
 				{ID: testCallID1, Name: testToolNameWeather},
@@ -449,7 +449,7 @@ func TestAdapter_PublishErrors_AreWrapped(t *testing.T) {
 		pub := essessey.NewPublisher(ctx, errSink{})
 		adapter := New(pub)
 
-		err := adapter.onToolCallStart(ctx, elelem.ToolCallEvent{
+		err := adapter.OnToolCallStart(ctx, elelem.ToolCallEvent{
 			CallID: testCallID1, Name: testToolNameWeather, Index: 0,
 		})
 		require.Error(t, err)
@@ -462,7 +462,7 @@ func TestAdapter_PublishErrors_AreWrapped(t *testing.T) {
 		pub := essessey.NewPublisher(ctx, errSink{})
 		adapter := New(pub)
 
-		err := adapter.onToolResult(ctx, elelem.ToolCallEvent{
+		err := adapter.OnToolResult(ctx, elelem.ToolCallEvent{
 			CallID: testCallID1, Name: testToolNameWeather, Index: 0,
 			Result: &elelem.ToolResult{Content: "sunny"},
 		})

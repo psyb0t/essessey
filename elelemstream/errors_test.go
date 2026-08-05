@@ -24,14 +24,14 @@ func TestAdapter_SentinelsSurviveTheWrap(t *testing.T) {
 		{
 			"delta before a round opened",
 			func(a *Adapter) error {
-				return a.onDelta(context.Background(), elelem.Delta{Text: "x"})
+				return a.OnDelta(context.Background(), elelem.Delta{Text: "x"})
 			},
 			ErrRoundStreamNotInitialized,
 		},
 		{
 			"assistant message before a round opened",
 			func(a *Adapter) error {
-				return a.onAssistantMessage(
+				return a.OnAssistantMessage(
 					context.Background(), elelem.Message{},
 				)
 			},
@@ -40,7 +40,7 @@ func TestAdapter_SentinelsSurviveTheWrap(t *testing.T) {
 		{
 			"tool result with nothing attached",
 			func(a *Adapter) error {
-				return a.onToolResult(
+				return a.OnToolResult(
 					context.Background(),
 					elelem.ToolCallEvent{CallID: "call-1"},
 				)

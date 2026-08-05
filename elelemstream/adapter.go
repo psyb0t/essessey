@@ -48,20 +48,35 @@ func (a *Adapter) Rounds() int {
 
 // Bind registers the Adapter's callbacks on req and returns req, so callers
 // can chain it into the rest of the elelem.Request build.
+//
+// Bind is the convenience for an app with no per-round concerns of its own.
+// elelem's On* setters REPLACE rather than append, so a caller that registers
+// its own OnRoundStart AFTER Bind silently unregisters the Adapter's and stops
+// emitting blocks entirely. When the app needs its own hook — a heartbeat, a
+// log line, a metric — do not call Bind; register your own and call the
+// matching exported method from inside it:
+//
+//	req.OnRoundStart(func(ctx context.Context, ev *elelem.RoundEvent) error {
+//	    heartbeat.Touch()
+//	    return adapter.OnRoundStart(ctx, ev)
+//	})
+//
+// That is why every callback below is exported: composing with the app's own
+// concerns has to be possible without reimplementing the block arithmetic.
 func (a *Adapter) Bind(req *elelem.Request) *elelem.Request {
 	return req.
-		OnRoundStart(a.onRoundStart).
-		OnDelta(a.onDelta).
-		OnAssistantMessage(a.onAssistantMessage).
-		OnRoundEnd(a.onRoundEnd).
-		OnToolCallStart(a.onToolCallStart).
-		OnToolResult(a.onToolResult)
+		OnRoundStart(a.OnRoundStart).
+		OnDelta(a.OnDelta).
+		OnAssistantMessage(a.OnAssistantMessage).
+		OnRoundEnd(a.OnRoundEnd).
+		OnToolCallStart(a.OnToolCallStart).
+		OnToolResult(a.OnToolResult)
 }
 
-// onRoundStart opens a fresh roundStream at the block index the previous
+// OnRoundStart opens a fresh roundStream at the block index the previous
 // round (or the run's start) left off at. Nothing is emitted here — blocks
 // open lazily, on first content.
-func (a *Adapter) onRoundStart(
+func (a *Adapter) OnRoundStart(
 	_ context.Context,
 	_ *elelem.RoundEvent,
 ) error {
@@ -70,8 +85,8 @@ func (a *Adapter) onRoundStart(
 	return nil
 }
 
-// onDelta forwards a streamed chunk to the round's thinking/text streamers.
-func (a *Adapter) onDelta(ctx context.Context, delta elelem.Delta) error {
+// OnDelta forwards a streamed chunk to the round's thinking/text streamers.
+func (a *Adapter) OnDelta(ctx context.Context, delta elelem.Delta) error {
 	if a.roundStream == nil {
 		return ctxerrors.Wrap(ErrRoundStreamNotInitialized, "handle delta")
 	}
@@ -79,10 +94,10 @@ func (a *Adapter) onDelta(ctx context.Context, delta elelem.Delta) error {
 	return a.roundStream.handleDelta(ctx, delta)
 }
 
-// onAssistantMessage closes out the round's thinking/text blocks and derives
+// OnAssistantMessage closes out the round's thinking/text blocks and derives
 // the tool block base: toolBase is wherever the round's content left off, and
 // every tool_use/tool_result index for this round is computed relative to it.
-func (a *Adapter) onAssistantMessage(
+func (a *Adapter) OnAssistantMessage(
 	ctx context.Context,
 	message elelem.Message,
 ) error {
@@ -103,8 +118,8 @@ func (a *Adapter) onAssistantMessage(
 	return nil
 }
 
-// onRoundEnd tracks the completed round count.
-func (a *Adapter) onRoundEnd(
+// OnRoundEnd tracks the completed round count.
+func (a *Adapter) OnRoundEnd(
 	_ context.Context,
 	event *elelem.RoundEvent,
 ) error {
@@ -113,9 +128,9 @@ func (a *Adapter) onRoundEnd(
 	return nil
 }
 
-// onToolCallStart emits the tool_use block for one call. Parallel calls in
+// OnToolCallStart emits the tool_use block for one call. Parallel calls in
 // the same round each get their own slot: toolBase + the call's index.
-func (a *Adapter) onToolCallStart(
+func (a *Adapter) OnToolCallStart(
 	_ context.Context,
 	event elelem.ToolCallEvent,
 ) error {
@@ -131,11 +146,11 @@ func (a *Adapter) onToolCallStart(
 	return nil
 }
 
-// onToolResult emits the tool_result block for one call, after every tool_use
+// OnToolResult emits the tool_result block for one call, after every tool_use
 // block in the round — hence the +toolCallCount offset — then, once the last
 // result of the round has landed, advances blockIndex past all of them (2
 // blocks per tool: one use, one result) so the next round starts clean.
-func (a *Adapter) onToolResult(
+func (a *Adapter) OnToolResult(
 	_ context.Context,
 	event elelem.ToolCallEvent,
 ) error {

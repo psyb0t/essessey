@@ -4,6 +4,32 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.2.0 — 2026-08-05
+
+`elelemstream`'s callbacks are exported, so an app can wrap them.
+
+- **Breaking (in practice, not in signature): `Bind` alone could not serve an
+  app with its own per-round concerns.** elelem's `On*` setters REPLACE rather
+  than append, so a caller that registered its own `OnRoundStart` after `Bind`
+  silently unregistered the adapter's and stopped emitting content blocks
+  altogether — no error, just a stream that never renders. Every callback is
+  now exported (`OnRoundStart`, `OnDelta`, `OnAssistantMessage`, `OnRoundEnd`,
+  `OnToolCallStart`, `OnToolResult`), so an app registers its own hook and
+  calls the adapter's from inside it:
+
+  ```go
+  req.OnRoundStart(func(ctx context.Context, ev *elelem.RoundEvent) error {
+      heartbeat.Touch()
+      return adapter.OnRoundStart(ctx, ev)
+  })
+  ```
+
+  `Bind` stays as the convenience for the case with no extra concerns, and now
+  documents the trap rather than leaving it to be discovered.
+
+  Found by doing the first real integration rather than by reading the code —
+  the callbacks were unexported, so there was no way to compose at all.
+
 ## v0.1.1 — 2026-08-05
 
 Documentation. No API or behaviour change.
