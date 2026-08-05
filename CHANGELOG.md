@@ -4,6 +4,24 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.1.1 — 2026-08-05
+
+Documentation. No API or behaviour change.
+
+- **The core package had no package doc**, so `pkg.go.dev` showed a bare
+  symbol list for the package a reader lands on first. Added `doc.go`
+  covering the `Event` model, why SSE is treated as a format rather than a
+  transport peer, and the lazy-open / index-advance rules that the block
+  protocol depends on.
+- Added `elelemstream/README.md`. The block-index arithmetic is the one piece
+  where being slightly wrong fails silently — a tool result renders into the
+  wrong card rather than erroring — so the layout table, the invariants, and
+  why parallel tool calls break naive implementations now live next to that
+  code instead of only in its tests.
+- Reworded the top-level README. Several headings and one table header had
+  been carried over verbatim from a sibling project's README rather than
+  written for this one.
+
 ## v0.1.0 — 2026-08-05
 
 First release. One `Event` — a name plus a JSON payload — streamed to a

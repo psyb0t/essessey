@@ -6,10 +6,10 @@
 [![version](https://raw.githubusercontent.com/psyb0t/essessey/badges/version.svg)](https://github.com/psyb0t/essessey/tags)
 [![license](https://raw.githubusercontent.com/psyb0t/essessey/badges/license.svg)](LICENSE)
 
-essessey is SSE, spelled out loud.
+Say the letters. That's the name.
 
-A Go package for getting a model's answer to whoever is waiting for it —
-token by token, block by block, in the order it happened.
+Getting a model's answer to whoever is waiting for it — token by token, block
+by block, in the order it actually happened.
 
 Here is the hill this package dies on: **SSE is a format, not a transport.**
 Everybody lists it next to WebSocket and NATS as though they were three ways
@@ -60,10 +60,10 @@ return pub.SendStreamEpilogue(essessey.StopReasonEndTurn, outputTokens)
 
 - [Quick start](#quick-start)
 - [Why one Event, many bindings](#why-one-event-many-bindings)
-- [The pieces](#the-pieces)
+- [What each package does](#what-each-package-does)
 - [Zero transport dependencies](#zero-transport-dependencies)
 - [elelemstream](#elelemstream)
-- [Package shape](#package-shape)
+- [Layout](#layout)
 - [Development](#development)
 - [License](#license)
 
@@ -140,9 +140,9 @@ same `json.RawMessage` regardless — a message published to NATS and a chunk
 scanned off an SSE byte stream decode into the identical Go struct on the
 receiving end.
 
-## The pieces
+## What each package does
 
-| Area | What you get |
+| Package | Responsibility |
 |---|---|
 | **Core** (this package) | `Event`, the `Sink`/`Source` interfaces, `Publisher` (one `Send*` method per protocol event, plus `SendStreamPreamble`/`SendStreamEpilogue` for the open/close pair), `TextStreamer`/`LineStreamer` for turning a chunk-at-a-time answer into correctly-indexed content blocks, and `Reassemble`, which drains a `Source` back into a `ParsedStream` — accumulated text, tool calls matched to their results by content-block index, and an ordered timeline of both. |
 | **[sse](sse/)** | The SSE format itself: `FrameLines` renders the wire bytes, `WriterSink`/`HTTPSink` write framed events to an `io.Writer` or a flushing `http.ResponseWriter`, and `Source` scans them back off an `io.Reader` — a malformed frame is warn-logged and skipped rather than aborting the stream. |
@@ -185,7 +185,12 @@ hand-rolling the translation. Everything else in this module — the
 core package, `sse`, `nats`, `ws` — stays free of an elelem import; a caller
 who isn't using elelem never pulls it in.
 
-## Package shape
+The block-index arithmetic it owns is the part worth reading before you touch
+it — which index a tool result lands on, why parallel calls break naive
+implementations, and which invariants the tests pin. That lives next to the
+code, in [elelemstream/README.md](elelemstream/README.md).
+
+## Layout
 
 ```text
 types.go, event.go             the wire types, EventType/Role/etc. constants, Event, Sink, Source
@@ -202,12 +207,12 @@ elelemstream/                  elelem callbacks -> block protocol (imports elele
 ## Development
 
 ```bash
-make dep            # go mod tidy + vendor
-make lint            # go fix + golangci-lint (strict)
-make lint-fix        # lint + auto-fix
-make test            # go test -race ./...
-make test-coverage   # coverage with minimum threshold
-make help            # every target
+make dep           # tidy the module and re-vendor
+make lint          # go fix, then golangci-lint at full strictness
+make lint-fix      # the same, applying what it can fix itself
+make test          # the suite, always with -race
+make test-coverage # the suite plus the coverage floor CI enforces
+make help          # the rest
 ```
 
 ## License
