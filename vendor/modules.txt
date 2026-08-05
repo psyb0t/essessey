@@ -742,9 +742,10 @@ github.com/psyb0t/common-go/scope
 # github.com/psyb0t/ctxerrors v0.4.3
 ## explicit; go 1.26
 github.com/psyb0t/ctxerrors
-# github.com/psyb0t/elelem v0.2.0
+# github.com/psyb0t/elelem v0.3.0
 ## explicit; go 1.26.0
 github.com/psyb0t/elelem
+github.com/psyb0t/elelem/elelemtest
 # github.com/quasilyte/go-ruleguard v0.4.5
 ## explicit; go 1.22.0
 github.com/quasilyte/go-ruleguard/internal/goenv

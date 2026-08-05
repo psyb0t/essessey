@@ -4,6 +4,41 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.3.0 — 2026-08-05
+
+`Bind` composes with an app's own callbacks, because the reason it could not
+was fixed upstream rather than worked around here.
+
+- **Requires [elelem](https://github.com/psyb0t/elelem) v0.3.0 or later.** Its
+  `On*` setters now append to a chain instead of replacing what was
+  registered, so an app can call `Bind` and then register its own
+  `OnRoundStart` and both run:
+
+  ```go
+  adapter.Bind(req).
+      OnRoundStart(func(context.Context, *elelem.RoundEvent) error {
+          heartbeat.Touch()
+
+          return nil
+      })
+  ```
+
+  v0.2.0 documented the opposite as a trap to route around. Exporting the
+  callbacks made composition possible but still left every caller responsible
+  for remembering the ordering rule — a hazard nobody hits until their stream
+  silently stops rendering. Fixing the setters upstream removes it for
+  everyone instead.
+
+- The exported callbacks stay. They are no longer the workaround, they are the
+  way to place a hook at an exact point relative to the `Adapter`'s, or to wire
+  only some of them.
+
+- `elelemstream/adapter_test.go` now runs a real turn through a scripted driver
+  with an app callback registered after `Bind`, and asserts blocks still reach
+  the sink. The old failure mode produced no error at all, so only an
+  end-to-end run catches it — verified by removing the `Adapter`'s
+  `OnRoundStart` registration and watching the test fail.
+
 ## v0.2.0 — 2026-08-05
 
 `elelemstream`'s callbacks are exported, so an app can wrap them.

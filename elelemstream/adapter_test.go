@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/psyb0t/elelem"
+	"github.com/psyb0t/elelem/elelemtest"
 	"github.com/psyb0t/essessey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +20,9 @@ const (
 	testToolNameWeather = "get_weather"
 	testToolNameA       = "tool_a"
 	testToolNameB       = "tool_b"
+
+	testModelID     = "test-model"
+	testContextSize = 100_000
 )
 
 // wireEvent is the shape shared by every content_block_* payload this
@@ -351,6 +355,42 @@ func TestAdapter_Bind(t *testing.T) {
 	req := adapter.Bind(elelem.NewRequest(client))
 
 	require.NotNil(t, req)
+}
+
+// The regression this package was reshaped around: an app that registers its
+// own per-round hook after Bind must not cost the Adapter its callbacks. Under
+// elelem's old replace-on-register behaviour the stream simply stopped
+// emitting — no error to catch, so only running a real turn shows it.
+func TestAdapter_Bind_ComposesWithTheAppsOwnCallbacks(t *testing.T) {
+	t.Parallel()
+
+	adapter, sink := newTestAdapter()
+
+	driver := elelemtest.NewScriptedDriver(elelemtest.Text("hello"))
+	appHookRan := false
+
+	_, err := adapter.Bind(
+		elelem.NewRequest(elelem.New(driver)).
+			WithModel(elelem.Model{
+				ID:          testModelID,
+				ContextSize: testContextSize,
+			}).
+			WithPrompt(elelem.NewPrompt().UserText("hi")),
+	).
+		OnRoundStart(func(context.Context, *elelem.RoundEvent) error {
+			appHookRan = true
+
+			return nil
+		}).
+		Run(t.Context())
+	require.NoError(t, err)
+
+	assert.True(t, appHookRan, "the app's own hook must run")
+
+	events := decodeEvents(t, sink.Events())
+	require.NotEmpty(t, events,
+		"the Adapter's callbacks must survive the app registering its own")
+	assert.Equal(t, essessey.ContentBlockTypeText, events[0].blockType())
 }
 
 func TestAdapter_UninitializedRoundStream(t *testing.T) {

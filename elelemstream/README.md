@@ -16,6 +16,38 @@ resp, err := adapter.Bind(
 ).Run(ctx)
 ```
 
+## Adding your own callbacks
+
+An app usually has per-round concerns of its own — a heartbeat, a log line, a
+metric. Register them as well; elelem's `On*` setters append to a chain, so
+both the `Adapter`'s callback and yours run:
+
+```go
+adapter.Bind(req).
+    OnRoundStart(func(context.Context, *elelem.RoundEvent) error {
+        heartbeat.Touch()
+
+        return nil
+    })
+```
+
+This needs elelem **v0.3.0 or later**. Before that the setters replaced rather
+than appended, and registering your own hook silently unregistered the
+`Adapter`'s — the stream just stopped emitting blocks, with no error to catch.
+
+Every callback is also exported (`OnRoundStart`, `OnDelta`,
+`OnAssistantMessage`, `OnRoundEnd`, `OnToolCallStart`, `OnToolResult`), for
+when you want your hook at an exact point relative to the `Adapter`'s, or want
+to wire only some of them:
+
+```go
+req.OnRoundStart(func(ctx context.Context, ev *elelem.RoundEvent) error {
+    heartbeat.Touch()
+
+    return adapter.OnRoundStart(ctx, ev)   // yours first, then the Adapter's
+})
+```
+
 ## Why this is a package and not ten lines in your app
 
 Because the index arithmetic is fiddly and silently wrong when you get it

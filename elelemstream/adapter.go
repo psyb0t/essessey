@@ -49,20 +49,20 @@ func (a *Adapter) Rounds() int {
 // Bind registers the Adapter's callbacks on req and returns req, so callers
 // can chain it into the rest of the elelem.Request build.
 //
-// Bind is the convenience for an app with no per-round concerns of its own.
-// elelem's On* setters REPLACE rather than append, so a caller that registers
-// its own OnRoundStart AFTER Bind silently unregisters the Adapter's and stops
-// emitting blocks entirely. When the app needs its own hook — a heartbeat, a
-// log line, a metric — do not call Bind; register your own and call the
-// matching exported method from inside it:
+// An app with per-round concerns of its own just registers them as well —
+// since elelem v0.3.0 the On* setters append to a chain rather than replace,
+// so Bind and the app's own OnRoundStart both run, in registration order:
 //
-//	req.OnRoundStart(func(ctx context.Context, ev *elelem.RoundEvent) error {
-//	    heartbeat.Touch()
-//	    return adapter.OnRoundStart(ctx, ev)
-//	})
+//	adapter.Bind(req).
+//	    OnRoundStart(func(context.Context, *elelem.RoundEvent) error {
+//	        heartbeat.Touch()
 //
-// That is why every callback below is exported: composing with the app's own
-// concerns has to be possible without reimplementing the block arithmetic.
+//	        return nil
+//	    })
+//
+// Every callback below is exported anyway, for the case where the app wants
+// its hook to run at an exact point relative to the Adapter's, or wants to
+// wire only some of them — without reimplementing the block arithmetic.
 func (a *Adapter) Bind(req *elelem.Request) *elelem.Request {
 	return req.
 		OnRoundStart(a.OnRoundStart).
