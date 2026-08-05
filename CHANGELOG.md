@@ -4,6 +4,15 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.4.1 — 2026-08-05
+
+README only. No code, no API, no behaviour change.
+
+- The README now reads like the rest of the psyb0t libraries instead of a
+  whitepaper. Same facts, same structure, same links, same hill it dies on
+  (SSE is a format, not a transport) — just in the voice the rest of the
+  ecosystem already uses.
+
 ## v0.4.0 — 2026-08-05
 
 Tracks [elelem](https://github.com/psyb0t/elelem) v0.4.0. No API change here.

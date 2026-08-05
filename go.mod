@@ -7,7 +7,7 @@ tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 require (
 	github.com/psyb0t/common-go v0.3.2
 	github.com/psyb0t/ctxerrors v0.4.3
-	github.com/psyb0t/elelem v0.4.0
+	github.com/psyb0t/elelem v0.4.1
 	github.com/stretchr/testify v1.11.1
 )
 

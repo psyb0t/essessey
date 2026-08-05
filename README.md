@@ -6,33 +6,33 @@
 [![version](https://raw.githubusercontent.com/psyb0t/essessey/badges/version.svg)](https://github.com/psyb0t/essessey/tags)
 [![license](https://raw.githubusercontent.com/psyb0t/essessey/badges/license.svg)](LICENSE)
 
-Say the letters. That's the name.
+Say the letters out loud. That's the name. S-S-E.
 
-Getting a model's answer to whoever is waiting for it — token by token, block
-by block, in the order it actually happened.
+Getting a model's answer to whoever's waiting for it — token by token, block
+by block, in the order it actually fucking happened.
 
-Here is the hill this package dies on: **SSE is a format, not a transport.**
-Everybody lists it next to WebSocket and NATS as though they were three ways
-of doing the same thing. They are not. `event:` / `data:` / blank line exists
-for exactly one reason — an HTTP response body is a pipe with no seams, so
-something has to mark where one event stops and the next starts. Give the
+Here's the hill this package is prepared to die on: **SSE is a format, not a
+transport.** Everybody lists it next to WebSocket and NATS like they're three
+flavors of the same damn thing. They're not. `event:` / `data:` / blank line
+exists for exactly one reason — an HTTP response body is a pipe with no seams,
+so something has to mark where one event stops and the next starts. Hand those
 same events to NATS or a WebSocket and that framing is dead weight: those
 already deliver discrete messages. So here SSE is one binding that adds
-framing, and the message-oriented ones don't, and all of them carry the same
+framing, the message-oriented ones don't, and all of them carry the same
 `Event`. A browser `EventSource` and a NATS subscriber parse identical JSON.
+That's the whole fucking point.
 
-It does not talk to a model — that is [elelem](https://github.com/psyb0t/elelem)'s
-job, and `elelemstream` is the seam between them. It does not own your HTTP
-handler, does not pick your broker, and does not drag a client library into
-your build to prove it supports one: the NATS and WebSocket bindings are
-written against the smallest interface each needs, so you hand them the
-connection you already have and this package stays at zero transport
-dependencies.
+It doesn't talk to a model — that's [elelem](https://github.com/psyb0t/elelem)'s
+job, and `elelemstream` is the seam between them. It doesn't own your HTTP
+handler, doesn't pick your broker, and doesn't drag half of npm's Go equivalent
+into your build just to prove it supports one: the NATS and WebSocket bindings
+are written against the smallest interface each actually needs, so you hand
+them the connection you already have and this package stays at zero transport
+dependencies. Zero. Check the `go.mod` yourself.
 
-What it does own is the boring part nobody wants to write twice — which
-content block index a tool result belongs to, when a thinking block has to
-close before the answer starts, and putting a stream back together at the
-other end.
+What it DOES own is the boring shit nobody wants to write twice — which content
+block index a tool result belongs to, when a thinking block has to close before
+the answer starts, and gluing a stream back together at the other end.
 
 ```go
 sink := essessey.NewInMemorySink() // or sse.NewWriterSink(w), nats.NewSink(conn, "turn"), ws.NewSink(conn)
@@ -73,8 +73,8 @@ return pub.SendStreamEpilogue(essessey.StopReasonEndTurn, outputTokens)
 go get github.com/psyb0t/essessey
 ```
 
-A `Publisher` writes to any `Sink`. `InMemorySink` needs nothing to try —
-it just collects what was emitted:
+A `Publisher` writes to any `Sink`. `InMemorySink` needs nothing at all to try
+— it just collects whatever got emitted:
 
 ```go
 ctx := context.Background()
@@ -109,9 +109,9 @@ fmt.Println(sink.Len(), "events emitted")
 
 Swap `InMemorySink` for `sse.NewWriterSink(w)` (or `sse.NewHTTPSink(w)` behind
 a flushing `http.ResponseWriter`), `nats.NewSink(conn, subjectPrefix)`, or
-`ws.NewSink(conn)` and every line above the sink construction is unchanged —
-the `Publisher`, the streamer, and the event sequence don't know or care
-which delivery is on the other end.
+`ws.NewSink(conn)` and every line above the sink construction stays exactly the
+fucking same — the `Publisher`, the streamer, and the event sequence have no
+idea which delivery is on the other end, and no reason to.
 
 ## Why one Event, many bindings
 
@@ -125,7 +125,7 @@ type Event struct {
 That's the whole wire model: a name and a JSON payload. `Sink` delivers it
 (`Emit(ctx, Event) error`); `Source` reads it back (`Next(ctx) (Event,
 error)`, ending the stream with `ErrNoMoreEvents`). Neither interface knows
-what "framing" means — that's a property of the binding underneath, not of
+what "framing" even means — that's a property of the binding underneath, not of
 the event.
 
 | binding | needs framing? | why |
@@ -135,26 +135,25 @@ the event.
 | WebSocket | no | every write is already a discrete frame |
 
 So the SSE binding owns a codec (`event:` / `data:` lines plus the blank-line
-terminator) that the other two never need. What travels as `Data` is the
-same `json.RawMessage` regardless — a message published to NATS and a chunk
-scanned off an SSE byte stream decode into the identical Go struct on the
-receiving end.
+terminator) the other two never need. What travels as `Data` is the same
+`json.RawMessage` either way — a message published to NATS and a chunk scanned
+off an SSE byte stream decode into the identical Go struct on the far end.
 
 ## What each package does
 
 | Package | Responsibility |
 |---|---|
 | **Core** (this package) | `Event`, the `Sink`/`Source` interfaces, `Publisher` (one `Send*` method per protocol event, plus `SendStreamPreamble`/`SendStreamEpilogue` for the open/close pair), `TextStreamer`/`LineStreamer` for turning a chunk-at-a-time answer into correctly-indexed content blocks, and `Reassemble`, which drains a `Source` back into a `ParsedStream` — accumulated text, tool calls matched to their results by content-block index, and an ordered timeline of both. |
-| **[sse](sse/)** | The SSE format itself: `FrameLines` renders the wire bytes, `WriterSink`/`HTTPSink` write framed events to an `io.Writer` or a flushing `http.ResponseWriter`, and `Source` scans them back off an `io.Reader` — a malformed frame is warn-logged and skipped rather than aborting the stream. |
-| **[nats](nats/)** | A `Sink` that publishes `Event.Data` unframed to `subjectPrefix.<eventType>`, and a `Source` whose `Deliver` method is wired as a subscription callback. |
-| **[ws](ws/)** | A `Sink` that writes the whole `Event` as one `WriteJSON` call, and a `Source` whose `Deliver` method is wired into a read loop. |
+| **[sse](sse/)** | The SSE format itself: `FrameLines` renders the wire bytes, `WriterSink`/`HTTPSink` write framed events to an `io.Writer` or a flushing `http.ResponseWriter`, and `Source` scans them back off an `io.Reader` — a malformed frame gets warn-logged and skipped instead of nuking the whole stream. |
+| **[nats](nats/)** | A `Sink` that publishes `Event.Data` unframed to `subjectPrefix.<eventType>`, and a `Source` whose `Deliver` method you wire in as a subscription callback. |
+| **[ws](ws/)** | A `Sink` that writes the whole `Event` as one `WriteJSON` call, and a `Source` whose `Deliver` method you wire into a read loop. |
 | **[elelemstream](elelemstream/)** | Bridges [elelem](https://github.com/psyb0t/elelem)'s callbacks to this protocol — see below. |
-| Test doubles (`memory.go`) | `InMemorySink` collects events instead of delivering them (not test-only — also what you want when a turn must be fully produced before any of it is released), and `SliceSource` replays a fixed slice, so feeding one `InMemorySink`'s `Events()` into a `SliceSource` round-trips a stream with no transport involved at all. |
+| Test doubles (`memory.go`) | `InMemorySink` collects events instead of delivering them (not test-only — it's also what you want when a turn has to be fully produced before any of it gets released), and `SliceSource` replays a fixed slice, so feeding one `InMemorySink`'s `Events()` into a `SliceSource` round-trips a whole stream with no transport involved whatsoever. |
 
 ## Zero transport dependencies
 
-`sse` needs nothing beyond the standard library. `nats` and `ws` each
-declare the one method they actually need from a client:
+`sse` needs nothing beyond the standard library. `nats` and `ws` each declare
+the one single method they actually need from a client:
 
 ```go
 // nats.Publisher
@@ -169,26 +168,28 @@ type Conn interface {
 ```
 
 `*nats.Conn` (`github.com/nats-io/nats.go`) and a gorilla `*websocket.Conn`
-already satisfy these as-is — you pass your own client in, and essessey
-never imports either SDK. That keeps the module graph out of the `go mod
-vendor` cascade a real transport client drags in, for the sake of one method
-each binding actually calls.
+already satisfy these as-is — you pass your own client in, and essessey never
+imports either SDK. Which keeps your module graph clear of the `go mod vendor`
+avalanche a real transport client drags along behind it, all for the sake of
+one method per binding. One method. That's not worth a dependency.
 
 ## elelemstream
 
 `elelemstream` is the one subpackage that imports
 [elelem](https://github.com/psyb0t/elelem): it translates elelem's callback
-stream (text deltas, reasoning deltas, tool-call starts and tool results)
-into this package's block protocol, so an elelem-backed handler gets the
-same `message_start` → content blocks → `message_stop` sequence without
-hand-rolling the translation. Everything else in this module — the
-core package, `sse`, `nats`, `ws` — stays free of an elelem import; a caller
-who isn't using elelem never pulls it in.
+stream (text deltas, reasoning deltas, tool-call starts and tool results) into
+this package's block protocol, so an elelem-backed handler gets the same
+`message_start` → content blocks → `message_stop` sequence without you
+hand-rolling the translation. Everything else in this module — the core
+package, `sse`, `nats`, `ws` — stays free of an elelem import; a caller who
+isn't using elelem never pulls it in.
 
-The block-index arithmetic it owns is the part worth reading before you touch
-it — which index a tool result lands on, why parallel calls break naive
-implementations, and which invariants the tests pin. That lives next to the
-code, in [elelemstream/README.md](elelemstream/README.md).
+The block-index arithmetic it owns is the part worth reading before you go
+poking at it — which index a tool result lands on, why parallel calls wreck the
+naive implementation everyone writes first, and which invariants the tests pin
+down. That lives next to the code, in
+[elelemstream/README.md](elelemstream/README.md). Read it before you "simplify"
+anything in there.
 
 ## Layout
 
@@ -209,10 +210,10 @@ elelemstream/                  elelem callbacks -> block protocol (imports elele
 ```bash
 make dep           # tidy the module and re-vendor
 make lint          # go fix, then golangci-lint at full strictness
-make lint-fix      # the same, applying what it can fix itself
+make lint-fix      # the same, applying whatever it can fix itself
 make test          # the suite, always with -race
 make test-coverage # the suite plus the coverage floor CI enforces
-make help          # the rest
+make help          # the rest of it
 ```
 
 ## License
