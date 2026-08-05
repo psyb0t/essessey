@@ -4,6 +4,28 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.4.0 — 2026-08-05
+
+Tracks [elelem](https://github.com/psyb0t/elelem) v0.4.0. No API change here.
+
+- **Requires elelem v0.4.0 or later**, and this is the breaking part: upgrading
+  essessey pulls elelem v0.4.0 into your build, where `Request.Complete`,
+  `Request.Stream` and `Request.CompleteInto` no longer exist. Migration is
+  mechanical — `Complete(ctx)` becomes `Run(ctx)`, `CompleteInto(ctx, &v)`
+  becomes `RunInto(ctx, &v)`, and `Stream(ctx, fn)` becomes
+  `OnDelta(fn).Run(ctx)`. See elelem's changelog for the one behaviour change
+  to check for.
+
+- Nothing in this package moved. `Adapter`, `Bind` and every exported callback
+  have the same signatures and the same block output.
+
+- `elelem.WithStreaming(false)` — new upstream, for backends that cannot serve
+  a streaming call — is transparent here. elelem feeds the finished response
+  through the same callbacks the `Adapter` binds, so the blocks on the wire are
+  identical; a subscriber only sees them arrive together at the end of the turn
+  rather than filling in. Documented in
+  [elelemstream/README.md](elelemstream/README.md).
+
 ## v0.3.0 — 2026-08-05
 
 `Bind` composes with an app's own callbacks, because the reason it could not

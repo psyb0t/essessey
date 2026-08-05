@@ -35,6 +35,17 @@ This needs elelem **v0.3.0 or later**. Before that the setters replaced rather
 than appended, and registering your own hook silently unregistered the
 `Adapter`'s — the stream just stopped emitting blocks, with no error to catch.
 
+## When elelem is not streaming
+
+`elelem.WithStreaming(false)` exists for backends that cannot serve a streaming
+call — an async job queue in front of the model, typically. It changes the
+transport, not the callbacks: elelem feeds the finished response through the
+same `On*` hooks the `Adapter` is bound to.
+
+So this package keeps working, and the block protocol on the wire is the same
+shape. The only difference a subscriber sees is timing — the blocks for a turn
+all arrive at once, at the end, instead of filling in as the model writes.
+
 Every callback is also exported (`OnRoundStart`, `OnDelta`,
 `OnAssistantMessage`, `OnRoundEnd`, `OnToolCallStart`, `OnToolResult`), for
 when you want your hook at an exact point relative to the `Adapter`'s, or want
