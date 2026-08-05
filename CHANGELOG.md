@@ -4,6 +4,23 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.4.2 — 2026-08-05
+
+CI only. No code, no API, no behaviour change.
+
+- **This repo was missing three of the four workflows every other public repo
+  here runs.** It had `pipeline.yml` and nothing else, so it was never mirrored,
+  never archived, and had no PR gate.
+  - `mirror-and-archive.yml` — pushes mirror to GitLab and Codeberg; the
+    default branch and tags additionally save to the Wayback Machine.
+  - `issue-pull.yml` — relays issues opened on the mirrors back here.
+  - `collaborators-only.yml` — closes and locks PRs from non-collaborators.
+- The two cron slots are **this repo's own**, not copies of another repo's.
+  Every mirrored repo holds a unique monthly archive slot, because the Wayback
+  save is rate-limited and takes roughly two minutes; reusing a slot would put
+  two repos in it. `issue-pull` staggers its minute for the same reason, since
+  GitHub fires an account's crons together.
+
 ## v0.4.1 — 2026-08-05
 
 README only. No code, no API, no behaviour change.
