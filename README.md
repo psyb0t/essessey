@@ -63,6 +63,7 @@ return pub.SendStreamEpilogue(essessey.StopReasonEndTurn, outputTokens)
 - [Quick start](#quick-start)
 - [Why one Event, many bindings](#why-one-event-many-bindings)
 - [What each package does](#what-each-package-does)
+- [Resuming a dropped stream](#resuming-a-dropped-stream)
 - [Zero transport dependencies](#zero-transport-dependencies)
 - [elelemstream](#elelemstream)
 - [Layout](#layout)
@@ -178,7 +179,59 @@ to do.
 | **[nats](nats/)** | A `Sink` that publishes `Event.Data` unframed to `subjectPrefix.<eventType>`, and a `Source` whose `Deliver` method you wire in as a subscription callback. |
 | **[ws](ws/)** | A `Sink` that writes the whole `Event` as one `WriteJSON` call, and a `Source` whose `Deliver` method you wire into a read loop. |
 | **[elelemstream](elelemstream/)** | Bridges [elelem](https://github.com/psyb0t/elelem)'s callbacks to this protocol — see below. |
+| Retention (`store.go`, `multisink.go`) | `MultiSink` fans one `Emit` out to several sinks, and `EventStore` retains recent events per stream so a reconnecting client can be resumed — with `InMemoryEventStore` as a bounded, per-stream default. See [Resuming a dropped stream](#resuming-a-dropped-stream). |
 | Test doubles (`memory.go`) | `InMemorySink` collects events instead of delivering them (not test-only — it's also what you want when a turn has to be fully produced before any of it gets released), and `SliceSource` replays a fixed slice, so feeding one `InMemorySink`'s `Events()` into a `SliceSource` round-trips a whole stream with no transport involved whatsoever. |
+
+## Resuming a dropped stream
+
+`Event.ID` gives a client a resume point; `EventStore` is what lets a server
+honour it. The protocol gives you the mechanism, not the retention — you can
+only resume to an event you still have.
+
+Capture composes rather than wrapping. `MultiSink` fans one `Emit` to several
+sinks, and `store.SinkFor(id)` is the store's write half, so retention is just
+another destination:
+
+```go
+store, err := essessey.NewInMemoryEventStore(256) // per stream, oldest evicted
+live := essessey.NewMultiSink(httpSink, store.SinkFor(chatID))
+```
+
+Replay needs nothing new. Ask what came after the client's last id, hand it to a
+`SliceSource`, and pump it through the ordinary sink — the same code path a live
+stream uses, so the two cannot drift and the client cannot tell them apart:
+
+```go
+events, known, err := store.Since(ctx, chatID, lastEventID)
+if !known {
+	// Not retained: evicted, never seen, or from a previous process.
+	// Restart the stream — do NOT guess.
+}
+```
+
+That `known` flag is the whole design. When a resume point is missing, replaying
+from the start duplicates everything the client already rendered and replaying
+from now silently drops the events in between — the exact gap ids exist to
+prevent. Only the caller knows which is acceptable, so the store refuses to
+choose.
+
+Four things worth knowing before wiring it up:
+
+- **Replay through the wire sink alone, never the `MultiSink`** — otherwise each
+  reconnect re-appends what it is replaying and the store grows without bound.
+- **`streamID` is a security boundary.** Replay keyed only by event id would let
+  a client presenting an id receive someone else's events. Scope it per
+  conversation and authorize the resume exactly as you authorize opening the
+  stream.
+- **Events without an id are still replayed**, they just cannot be resumed TO.
+  Dropping them would silently skip real content.
+- **An id-less frame still moves a client's resume point.** The format sets the
+  last-event-id before it discards an event with no data, so a bare `id:` frame
+  advances the client without delivering anything.
+
+`InMemoryEventStore` is per-process and bounded — a reasonable default and a
+reference implementation. Anything that must survive a restart or span replicas
+wants its own `EventStore` against shared storage.
 
 ## Zero transport dependencies
 

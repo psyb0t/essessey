@@ -4,6 +4,56 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.6.0 — 2026-08-06
+
+Retention and fan-out, so the event ids added in v0.5.0 can actually be used to
+resume a dropped stream. Additive — nothing existing changes behaviour.
+
+### Added
+
+- `MultiSink` — fans one `Emit` out to several sinks. Every other sink is
+  terminal, so there was previously no way to send the same event to two
+  places. It forwards to all of them even when one fails, returning the joined
+  error: a full store or a broken audit sink must not cost the client its
+  stream, but the failure must not vanish either. A non-nil error therefore
+  means "at least one destination missed it", not "nothing was delivered".
+
+- `EventStore` — retains recent events per stream so a reconnecting client can
+  be resumed. Its read side reports whether the resume point is KNOWN rather
+  than guessing: when an id has aged out or never existed, replaying from the
+  start duplicates everything the client already rendered, and replaying from
+  now silently drops the events in between — which is the exact gap ids exist
+  to prevent. Only the caller can decide, so `Since` hands that decision back.
+
+- `InMemoryEventStore` — a bounded, per-stream, concurrency-safe default. Per
+  stream it keeps a ring buffer for order and eviction plus an id index for
+  lookup; ids are opaque strings with no ordering, so a ring alone would make
+  every resume a linear scan. `SinkFor(streamID)` is its write half, so
+  retention composes with `MultiSink` instead of needing a wrapper type.
+
+### Notes
+
+Replay deliberately introduces no new code path: ask the store what came after
+the client's last id, wrap it in the existing `SliceSource`, and pump it through
+the ordinary `Sink`. A separate replay path is a path that can drift from the
+live one, and a test asserts the two are indistinguishable.
+
+Behaviours pinned by tests rather than left implicit:
+
+- Events with no id are retained and replayed, but cannot be resumed TO —
+  dropping them would silently skip real content.
+- A duplicate id moves the resume point to the later occurrence, skipping what
+  came between. Ids are assumed unique per stream.
+- Eviction removes the evicted id from the index, so a long-dead id never
+  reports as a valid resume point and the index cannot grow without bound.
+- A capacity of zero or less is refused at construction — it would accept every
+  append and resume nothing, a buffer that silently never works.
+
+Two things the store cannot do for you, documented in the README: replay must go
+through the wire sink alone (replaying into the `MultiSink` re-appends what it is
+replaying), and `streamID` is a security boundary — replay keyed only by event id
+would hand one client another's events.
+
 ## v0.5.0 — 2026-08-06
 
 The SSE binding now implements the wire format as specified, instead of the
