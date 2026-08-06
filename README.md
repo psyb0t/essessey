@@ -19,8 +19,10 @@ so something has to mark where one event stops and the next starts. Hand those
 same events to NATS or a WebSocket and that framing is dead weight: those
 already deliver discrete messages. So here SSE is one binding that adds
 framing, the message-oriented ones don't, and all of them carry the same
-`Event`. A browser `EventSource` and a NATS subscriber parse identical JSON.
-That's the whole fucking point.
+`Event`. A browser `EventSource` and a NATS subscriber decode the identical
+JSON PAYLOAD — the envelope around it is what differs per binding, and that
+difference is spelled out below rather than glossed over. That's the whole
+fucking point.
 
 It doesn't talk to a model — that's [elelem](https://github.com/psyb0t/elelem)'s
 job, and `elelemstream` is the seam between them. It doesn't own your HTTP
@@ -117,16 +119,25 @@ idea which delivery is on the other end, and no reason to.
 
 ```go
 type Event struct {
+	ID    string          `json:"id,omitempty"`
 	Event EventType       `json:"event"`
 	Data  json.RawMessage `json:"data"`
 }
 ```
 
-That's the whole wire model: a name and a JSON payload. `Sink` delivers it
-(`Emit(ctx, Event) error`); `Source` reads it back (`Next(ctx) (Event,
-error)`, ending the stream with `ErrNoMoreEvents`). Neither interface knows
-what "framing" even means — that's a property of the binding underneath, not of
-the event.
+That's the whole wire model: an optional id, a name, and a JSON payload.
+`Sink` delivers it (`Emit(ctx, Event) error`); `Source` reads it back
+(`Next(ctx) (Event, error)`, ending the stream with `ErrNoMoreEvents`).
+Neither interface knows what "framing" even means — that's a property of the
+binding underneath, not of the event.
+
+`ID` is what makes a dropped connection recoverable. A browser `EventSource`
+remembers the last id it saw and sends it back as `Last-Event-ID` on reconnect,
+so a server can resume instead of restarting the stream — and a subscriber that
+tracks ids can tell it MISSED one rather than silently rendering a gap. It is
+`omitempty` deliberately: an empty `id:` field on the wire does not mean "no
+id", it RESETS the receiver's resume point, so emitting one for an event that
+simply has no id would throw away the position every earlier event established.
 
 | binding | needs framing? | why |
 |---|---|---|
@@ -134,10 +145,29 @@ the event.
 | NATS | no | every publish is already a discrete message |
 | WebSocket | no | every write is already a discrete frame |
 
-So the SSE binding owns a codec (`event:` / `data:` lines plus the blank-line
-terminator) the other two never need. What travels as `Data` is the same
-`json.RawMessage` either way — a message published to NATS and a chunk scanned
-off an SSE byte stream decode into the identical Go struct on the far end.
+So the SSE binding owns a codec the other two never need, and it implements the
+format as specified rather than the subset one consumer happens to use: one
+`data:` field per line of the payload, `id:` and `retry:`, comment lines,
+CRLF/LF/lone-CR terminators, the optional space after a field's colon, a
+stripped byte order mark, and the rule that an event with no data field is
+discarded rather than delivered empty. `FrameComment` writes the keep-alive
+that stops an intermediary dropping an idle connection; `FrameRetry` tells the
+client how long to wait before reconnecting.
+
+The per-line `data:` split is not a detail. The format has no escaping and no
+length prefix, so a newline inside a payload ends the FIELD and a blank line
+ends the EVENT — emitting a multi-line payload as one `data:` line puts
+different bytes on the wire than the caller passed, and for a payload
+containing a blank line it forges an extra event out of the remainder.
+
+What travels as `Data` is the same `json.RawMessage` either way, but be precise
+about what "identical" means per binding: WebSocket writes the whole `Event` as
+one JSON object, so a client gets `id`/`event`/`data` inline. NATS publishes the
+payload RAW with the event type in the SUBJECT, so a subscriber reconstructs the
+envelope from the subject it matched and does not see the id at all. SSE carries
+all three as wire fields. The PAYLOAD is identical everywhere; the envelope
+takes a different route on each binding, and a NATS subscriber has the most work
+to do.
 
 ## What each package does
 

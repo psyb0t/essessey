@@ -16,3 +16,6 @@ git-update.sh
 # Written by local tooling to exclude its own scratch dirs from a build
 # context. This module ships no Dockerfile, so the file has no meaning here.
 .dockerignore
+.anustimes/
+.brutal_reviews/
+.plan-and-delegate/

@@ -4,6 +4,89 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.5.0 — 2026-08-06
+
+The SSE binding now implements the wire format as specified, instead of the
+subset one consumer happened to exercise. **Breaking** for anyone who depended
+on the old framing bytes or the old parser's behaviour — details below.
+
+### Fixed
+
+- **The codec could not round-trip its own output.** A sink wrote a payload of
+  `{\n"a":1\n}` and the matching source read back `{`: truncated at the first
+  newline, remainder discarded, no error. Any payload containing a newline was
+  silently corrupted end to end.
+
+- **A payload containing a blank line forged a second event.** The framer wrote
+  the whole payload as ONE `data:` line, but the format has no escaping and no
+  length prefix — a newline inside a value ends the field and a blank line ends
+  the event. Payloads are now emitted as one `data:` field per line, which is
+  how the format represents a multi-line value.
+
+- **An event type containing a newline could inject events.** Same missing
+  split on the `event:` line: one `Emit` call could put several complete,
+  caller-chosen events on the wire. Field values that cannot survive a single
+  line (CR, LF, NUL) are now stripped before framing.
+
+- **Conformant streams from other producers were unreadable.** The parser
+  matched the literal prefix `"data: "`, space included. That space is OPTIONAL
+  in the format, so a producer writing `data:x` yielded nothing at all — no
+  event, no error. Field lines are now parsed properly: name before the first
+  colon, value after, exactly one leading space removed if present.
+
+- **Multiple `data:` fields lost everything after the first.** They are joined
+  with newlines into a single value, which is the only way a multi-line payload
+  survives.
+
+- **Events were emitted on the wrong trigger.** The parser paired an `event:`
+  line with the next `data:` line; the format ends an event at a BLANK LINE.
+  With the state machine in place, a lone `retry:` or a block of comments no
+  longer produces a phantom event, and an event with no data field is discarded
+  rather than delivered empty.
+
+- **A lone CR was not a line terminator**, so a stream using bare CR — which
+  the format permits — parsed as nothing at all.
+
+- **A leading byte order mark swallowed the first event**, because it glued
+  itself to the first field name.
+
+- **Valid frames were being dropped as malformed.** A `data:` line with no
+  preceding `event:` line is a real event whose type is simply absent, and two
+  `event:` lines in a row means the last one wins. Both were previously skipped.
+
+### Added
+
+- `Event.ID` — the event identifier, emitted as `id:` and parsed back. This is
+  what makes a dropped connection recoverable: a client returns the last id it
+  saw as `Last-Event-ID` on reconnect, so a server can resume rather than
+  restart, and a subscriber tracking ids can detect a gap instead of silently
+  rendering one. Empty is omitted on purpose — an empty `id:` field RESETS the
+  receiver's resume point rather than meaning "no id".
+- `Source.LastEventID()` and `Source.Retry()` — the stream-level state a client
+  needs to reconnect correctly. The last id persists across events until the
+  producer changes it; an id containing NUL is ignored, leaving the previous
+  one intact so a malformed value cannot destroy a valid resume point.
+- `FrameRetry(time.Duration)` — tells the client how long to wait before
+  reconnecting. It describes the stream, not an event, so it is its own frame
+  rather than a field on `Event`.
+- `FrameComment(string)` — the keep-alive an intermediary needs to see so it
+  does not drop an idle connection.
+
+### Changed
+
+- **Breaking:** `FrameLines` output differs for any payload containing a
+  newline, and for any event carrying an ID. Byte-for-byte comparisons against
+  the old output will fail; the new bytes are what the format actually
+  specifies.
+- **Breaking:** `Source` now delivers events the old parser dropped (typeless
+  events) and no longer delivers phantom ones.
+- The README no longer claims a NATS subscriber and an `EventSource` receive
+  identical JSON. The PAYLOAD is identical; the envelope is not. WebSocket
+  sends the whole `Event` as one object, NATS publishes the payload raw with
+  the type in the subject and carries no id, SSE carries all three as wire
+  fields. A NATS subscriber has the most reconstruction to do, and that is now
+  stated rather than implied away.
+
 ## v0.4.2 — 2026-08-05
 
 CI only. No code, no API, no behaviour change.

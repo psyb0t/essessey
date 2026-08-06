@@ -14,6 +14,21 @@ import (
 // has always held JSON — the type now says so, and every non-byte-stream
 // binding is spared a []byte conversion per event.
 type Event struct {
+	// ID is the event's identifier. Optional, and omitted from the wire when
+	// empty.
+	//
+	// This is what makes a dropped connection recoverable. An SSE client
+	// remembers the last ID it saw and sends it back as the Last-Event-ID
+	// header when it reconnects, so a server can resume from that point
+	// instead of restarting the stream. It is also the only way a subscriber
+	// can notice it MISSED an event rather than silently rendering a gap.
+	//
+	// Empty is meaningful, which is why this is omitempty rather than always
+	// emitted: per the SSE specification an EMPTY id field RESETS the client's
+	// last-event-ID to the empty string, so writing `id:` for an event that
+	// simply has no ID would destroy the resume point of the events before it.
+	ID string `json:"id,omitempty"`
+
 	Event EventType       `json:"event"`
 	Data  json.RawMessage `json:"data"`
 }
