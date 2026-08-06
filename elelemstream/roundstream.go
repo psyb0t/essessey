@@ -64,7 +64,7 @@ func (stream *roundStream) handleDelta(
 	}
 
 	if err := stream.openText(ctx); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "open text block for delta")
 	}
 
 	if err := stream.text.Write(ctx, delta.Text); err != nil {
@@ -78,7 +78,7 @@ func (stream *roundStream) handleDelta(
 // block, guaranteeing thinking is already closed by the time it returns.
 func (stream *roundStream) finish(ctx context.Context) error {
 	if err := stream.openText(ctx); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "open text block to finish round")
 	}
 
 	if err := stream.text.Close(ctx); err != nil {

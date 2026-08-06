@@ -206,7 +206,7 @@ func (s *LineStreamer) Write(ctx context.Context, chunk string) error {
 		s.lineBuffer.Reset()
 
 		if err := s.emitLine(ctx, line, true); err != nil {
-			return err
+			return ctxerrors.Wrap(err, "emit completed line")
 		}
 
 		rest = rest[nlIdx+1:]

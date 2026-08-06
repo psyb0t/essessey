@@ -331,7 +331,7 @@ func (p *Publisher) SendStreamPreamble(
 	msgID, conversationID, model string,
 ) error {
 	if err := p.SendMessageStart(msgID, conversationID, model); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "send stream preamble")
 	}
 
 	return p.SendPing()
@@ -346,7 +346,7 @@ func (p *Publisher) SendStreamEpilogue(
 	outputTokens int,
 ) error {
 	if err := p.SendMessageDelta(stopReason, outputTokens); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "send stream epilogue")
 	}
 
 	return p.SendMessageStop()
@@ -358,11 +358,11 @@ func (p *Publisher) SendToolUseBlock(
 	toolUseID, name, inputJSON string,
 ) error {
 	if err := p.SendToolUseStart(index, toolUseID, name); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "start tool use block")
 	}
 
 	if err := p.SendToolInputDelta(index, inputJSON); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "send tool use input")
 	}
 
 	return p.SendContentBlockStop(index)
@@ -375,11 +375,11 @@ func (p *Publisher) SendToolResultBlock(
 	isError bool,
 ) error {
 	if err := p.SendToolResultStart(index, toolUseID, isError); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "start tool result block")
 	}
 
 	if err := p.SendToolResultDelta(index, resultText); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "send tool result text")
 	}
 
 	return p.SendContentBlockStop(index)

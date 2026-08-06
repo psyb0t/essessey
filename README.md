@@ -61,6 +61,7 @@ return pub.SendStreamEpilogue(essessey.StopReasonEndTurn, outputTokens)
 ## Contents
 
 - [Quick start](#quick-start)
+- [Reading a stream back](#reading-a-stream-back)
 - [Why one Event, many bindings](#why-one-event-many-bindings)
 - [What each package does](#what-each-package-does)
 - [Resuming a dropped stream](#resuming-a-dropped-stream)
@@ -115,6 +116,44 @@ a flushing `http.ResponseWriter`), `nats.NewSink(conn, subjectPrefix)`, or
 `ws.NewSink(conn)` and every line above the sink construction stays exactly the
 fucking same — the `Publisher`, the streamer, and the event sequence have no
 idea which delivery is on the other end, and no reason to.
+
+## Reading a stream back
+
+The other half. `Reassemble` drains any `Source` and hands back the finished
+turn — you do not walk events yourself unless you want to:
+
+```go
+src := sse.NewSource(resp.Body) // or nats/ws Source, or SliceSource in a test
+
+parsed := essessey.Reassemble(ctx, src)
+
+fmt.Println(parsed.Text)       // every text delta, concatenated
+fmt.Println(parsed.ToolNames)  // tools the model called
+fmt.Println(parsed.Timeline)   // text and tool activity, in the order it happened
+```
+
+`ParsedStream` also carries `Tools` (each call matched to its result by content
+block index — the bookkeeping this package exists to do for you), `Executions`,
+`ConversationID`, and `Error` if the stream carried one.
+
+If you do want the raw events, a `Source` is just an iterator:
+
+```go
+for {
+	ev, err := src.Next(ctx)
+	if errors.Is(err, essessey.ErrNoMoreEvents) {
+		break
+	}
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(ev.Event, string(ev.Data))
+}
+```
+
+`ErrNoMoreEvents` ends the stream cleanly — it is the terminator, not a failure,
+so a caller can range over a `Source` without special-casing it.
 
 ## Why one Event, many bindings
 
@@ -175,9 +214,9 @@ to do.
 | Package | Responsibility |
 |---|---|
 | **Core** (this package) | `Event`, the `Sink`/`Source` interfaces, `Publisher` (one `Send*` method per protocol event, plus `SendStreamPreamble`/`SendStreamEpilogue` for the open/close pair), `TextStreamer`/`LineStreamer` for turning a chunk-at-a-time answer into correctly-indexed content blocks, and `Reassemble`, which drains a `Source` back into a `ParsedStream` — accumulated text, tool calls matched to their results by content-block index, and an ordered timeline of both. |
-| **[sse](sse/)** | The SSE format itself: `FrameLines` renders the wire bytes, `WriterSink`/`HTTPSink` write framed events to an `io.Writer` or a flushing `http.ResponseWriter`, and `Source` scans them back off an `io.Reader` — a malformed frame gets warn-logged and skipped instead of nuking the whole stream. |
-| **[nats](nats/)** | A `Sink` that publishes `Event.Data` unframed to `subjectPrefix.<eventType>`, and a `Source` whose `Deliver` method you wire in as a subscription callback. |
-| **[ws](ws/)** | A `Sink` that writes the whole `Event` as one `WriteJSON` call, and a `Source` whose `Deliver` method you wire into a read loop. |
+| **[sse](sse/README.md)** | The SSE format itself: `FrameLines` renders the wire bytes, `WriterSink`/`HTTPSink` write framed events to an `io.Writer` or a flushing `http.ResponseWriter`, and `Source` scans them back off an `io.Reader` — a malformed frame gets warn-logged and skipped instead of nuking the whole stream. |
+| **[nats](nats/README.md)** | A `Sink` that publishes `Event.Data` unframed to `subjectPrefix.<eventType>`, and a `Source` whose `Deliver` method you wire in as a subscription callback. |
+| **[ws](ws/README.md)** | A `Sink` that writes the whole `Event` as one `WriteJSON` call, and a `Source` whose `Deliver` method you wire into a read loop. |
 | **[elelemstream](elelemstream/)** | Bridges [elelem](https://github.com/psyb0t/elelem)'s callbacks to this protocol — see below. |
 | Retention (`store.go`, `multisink.go`) | `MultiSink` fans one `Emit` out to several sinks, and `EventStore` retains recent events per stream so a reconnecting client can be resumed — with `InMemoryEventStore` as a bounded, per-stream default. See [Resuming a dropped stream](#resuming-a-dropped-stream). |
 | Test doubles (`memory.go`) | `InMemorySink` collects events instead of delivering them (not test-only — it's also what you want when a turn has to be fully produced before any of it gets released), and `SliceSource` replays a fixed slice, so feeding one `InMemorySink`'s `Events()` into a `SliceSource` round-trips a whole stream with no transport involved whatsoever. |
@@ -194,6 +233,8 @@ another destination:
 
 ```go
 store, err := essessey.NewInMemoryEventStore(256) // per stream, oldest evicted
+// A capacity of zero or less returns ErrInvalidCapacity rather than a store
+// that accepts every append and resumes nothing.
 live := essessey.NewMultiSink(httpSink, store.SinkFor(chatID))
 ```
 
@@ -282,6 +323,8 @@ publisher.go                   Publisher and one Send* method per protocol event
 streamer.go                    TextStreamer, LineStreamer
 reassemble.go                  Source -> ParsedStream reconstruction
 memory.go                      InMemorySink, SliceSource
+multisink.go                   MultiSink — fan one Emit out to several Sinks
+store.go                       EventStore, InMemoryEventStore — retention for resume
 sse/                           the SSE format: codec, WriterSink, HTTPSink, Source
 nats/                          NATS binding over a minimal Publisher interface
 ws/                            WebSocket binding over a minimal Conn interface

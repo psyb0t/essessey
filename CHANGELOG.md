@@ -4,6 +4,46 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.6.1 — 2026-08-06
+
+Documentation and error context. No API change, no behaviour change.
+
+### Added
+
+- A README for each binding, written for someone who does not already know how
+  this works. [sse](sse/README.md) covers the HTTP handler end to end, what the
+  bytes literally look like — including a multi-line payload becoming one
+  `data:` field per line — plus reading, keep-alives and resuming. It leads with
+  the trap that costs the most time: **this package does not set
+  `Content-Type: text/event-stream`, and a browser `EventSource` fails the
+  connection without it.** [nats](nats/README.md) covers the subject scheme with
+  real wildcard examples and states plainly that the event id is not carried on
+  that binding at all. [ws](ws/README.md) covers the one-concurrent-writer rule
+  that this package cannot enforce for you.
+
+- A "Reading a stream back" section in the root README. Every example there
+  showed how to WRITE a stream; `Reassemble` — half of what this library does —
+  had no example anywhere.
+
+### Fixed
+
+- **Ten call sites returned an error without context**, so a failure inside a
+  composite call such as `SendToolUseBlock` arrived with no frame naming which
+  step failed. They now wrap with `ctxerrors`, matching what the rest of the
+  codebase already did.
+
+- The root README's file layout listed every file except `store.go` and
+  `multisink.go`, the two added in v0.6.0, so the retention API appeared not to
+  exist. `ErrInvalidCapacity` was likewise undocumented.
+
+### Known limitation
+
+`InMemoryEventStore` is bounded per stream but **unbounded in the NUMBER of
+streams**: the map grows one entry per `streamID` ever seen and only `Clear`
+removes it, so total retention is `streams × capacity`. Call `Clear` when a
+stream ends, or sweep periodically — nothing evicts a whole stream on age or
+count.
+
 ## v0.6.0 — 2026-08-06
 
 Retention and fan-out, so the event ids added in v0.5.0 can actually be used to

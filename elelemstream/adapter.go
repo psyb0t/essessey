@@ -108,7 +108,7 @@ func (a *Adapter) OnAssistantMessage(
 	}
 
 	if err := a.roundStream.finish(ctx); err != nil {
-		return err
+		return ctxerrors.Wrap(err, "finish round stream")
 	}
 
 	a.blockIndex = a.roundStream.nextBlockIndex()
