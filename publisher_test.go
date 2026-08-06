@@ -243,20 +243,32 @@ func TestPublisher_CompositeHelpersEmitWholeBlocks(t *testing.T) {
 	}
 }
 
-// message_start carries the conversation id because that is how a client learns
-// a freshly-created conversation's id — from the stream, not a second request.
-func TestPublisher_MessageStartCarriesConversationID(t *testing.T) {
+// message_start carries the stream id because that is how a client learns a
+// freshly-created stream's id — from the stream, not a second request.
+func TestPublisher_MessageStartCarriesStreamID(t *testing.T) {
 	t.Parallel()
 
 	sink := NewInMemorySink()
 	pub := NewPublisher(t.Context(), sink)
 
-	require.NoError(t, pub.SendMessageStart("m1", "conv-42", "some-model"))
+	require.NoError(t, pub.SendMessageStart("m1", "stream-42", "some-model"))
 
 	var payload MessageStartData
 	require.NoError(t, json.Unmarshal(sink.Events()[0].Data, &payload))
 
-	assert.Equal(t, "conv-42", payload.Message.ConversationID)
+	assert.Equal(t, "stream-42", payload.Message.StreamID)
 	assert.Equal(t, "m1", payload.Message.ID)
 	assert.Equal(t, RoleAssistant, payload.Message.Role)
+
+	// Decoding into MessageStartData proves only that the tag round-trips
+	// through itself — it would pass just as happily if the tag still said
+	// conversation_id. Clients read the RAW key, so pin the raw key.
+	var raw struct {
+		Message map[string]json.RawMessage `json:"message"`
+	}
+
+	require.NoError(t, json.Unmarshal(sink.Events()[0].Data, &raw))
+
+	assert.JSONEq(t, `"stream-42"`, string(raw.Message["stream_id"]))
+	assert.NotContains(t, raw.Message, "conversation_id")
 }

@@ -4,6 +4,54 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.7.0 — 2026-08-06
+
+One naming change, applied everywhere: what this library streams is a **stream**,
+not a conversation.
+
+### Changed
+
+- **Breaking.** `MessageMeta.ConversationID` is now `MessageMeta.StreamID`, and
+  its JSON tag moves from `conversation_id` to `stream_id`. This is on the wire,
+  so a client reading `message_start` must read the new key.
+
+- **Breaking.** `ParsedStream.ConversationID` is now `ParsedStream.StreamID`.
+
+- The `conversationID` parameter of `Publisher.SendMessageStart` and
+  `Publisher.SendStreamPreamble` is renamed to `streamID`. Positional callers are
+  unaffected — the rename is source-compatible for anyone passing arguments by
+  position, which is every caller of a Go function.
+
+  Migration is mechanical: `conversation_id` → `stream_id` on the wire,
+  `.ConversationID` → `.StreamID` in Go.
+
+  The rationale is that nothing in this library is chat-specific. It streams
+  content blocks — a conversation turn, a build log, a document render, a
+  long-running job. Naming the identifier after one caller's domain made every
+  other use read as a workaround. Applications keep their own vocabulary and map
+  it onto `streamID` at the boundary.
+
+  This also resolves an incoherence introduced in v0.6.0: `EventStore` already
+  keyed retention by `streamID` while the wire called the same value
+  `conversation_id`, with nothing stating they were the same thing.
+
+### Added
+
+- The `message_start` test now pins the RAW JSON key, not just the Go field.
+  Decoding into `MessageStartData` only proves the tag round-trips through
+  itself — it passes just as happily with the wrong tag, while clients read the
+  raw key. The test now asserts `stream_id` is present and `conversation_id` is
+  absent.
+
+- `EventStore`'s documentation now says what `streamID` actually is: the same
+  identifier `SendMessageStart` puts on the wire, opaque to this library, minted
+  by the caller. It also states the two things that were previously implicit —
+  that keying retention at a finer grain than the wire id is a legitimate trade
+  (smaller buffer, no replay of earlier turns), and that a reconnecting client
+  supplies the `streamID` itself, so `Since` resolves it as a map key with no
+  notion of ownership. Authorize a resume exactly as you authorize opening the
+  stream.
+
 ## v0.6.1 — 2026-08-06
 
 Documentation and error context. No API change, no behaviour change.

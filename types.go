@@ -75,15 +75,15 @@ type MessageStartData struct {
 }
 
 type MessageMeta struct {
-	ID             string      `json:"id"`
-	ConversationID string      `json:"conversation_id"`
-	Type           MessageType `json:"type"`
-	Role           Role        `json:"role"`
-	Content        []any       `json:"content"`
-	Model          string      `json:"model"`
-	StopReason     *StopReason `json:"stop_reason"`
-	StopSequence   *string     `json:"stop_sequence"`
-	Usage          UsageStart  `json:"usage"`
+	ID           string      `json:"id"`
+	StreamID     string      `json:"stream_id"`
+	Type         MessageType `json:"type"`
+	Role         Role        `json:"role"`
+	Content      []any       `json:"content"`
+	Model        string      `json:"model"`
+	StopReason   *StopReason `json:"stop_reason"`
+	StopSequence *string     `json:"stop_sequence"`
+	Usage        UsageStart  `json:"usage"`
 }
 
 type UsageStart struct {

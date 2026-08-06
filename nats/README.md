@@ -57,7 +57,7 @@ subject is what lets a subscriber filter with a wildcard instead of decoding
 every payload to find out whether it cares:
 
 ```go
-conn.Subscribe("chat.conv_1.*", handler)              // one conversation
+conn.Subscribe("chat.stream_1.*", handler)            // one stream
 conn.Subscribe("chat.*.content_block_delta", handler) // deltas everywhere
 ```
 

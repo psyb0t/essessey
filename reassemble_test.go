@@ -12,7 +12,7 @@ import (
 // Fixture values reused across test cases below.
 const (
 	testMsgID          = "msg-1"
-	testConvID         = "conv-1"
+	testStreamID       = "stream-1"
 	testToolID1        = "tool-1"
 	testToolID2        = "tool-2"
 	testToolID9        = "tool-9"
@@ -39,11 +39,11 @@ func TestReassemble_TextOnly(t *testing.T) {
 			Data: mustJSON(t, MessageStartData{
 				Type: EventTypeMessageStart,
 				Message: MessageMeta{
-					ID:             testMsgID,
-					ConversationID: testConvID,
-					Type:           MessageTypeMessage,
-					Role:           RoleAssistant,
-					Model:          "test-model",
+					ID:       testMsgID,
+					StreamID: testStreamID,
+					Type:     MessageTypeMessage,
+					Role:     RoleAssistant,
+					Model:    "test-model",
 				},
 			}),
 		},
@@ -106,7 +106,7 @@ func TestReassemble_TextOnly(t *testing.T) {
 
 	got := Reassemble(context.Background(), NewSliceSource(events))
 
-	assert.Equal(t, testConvID, got.ConversationID)
+	assert.Equal(t, testStreamID, got.StreamID)
 	assert.Equal(t, "Hello world", got.Text)
 	assert.Empty(t, got.Error)
 	assert.Empty(t, got.Tools)
@@ -126,8 +126,8 @@ func TestReassemble_ToolUseAndResult(t *testing.T) {
 			Data: mustJSON(t, MessageStartData{
 				Type: EventTypeMessageStart,
 				Message: MessageMeta{
-					ID:             testMsgID,
-					ConversationID: testConvID,
+					ID:       testMsgID,
+					StreamID: testStreamID,
 				},
 			}),
 		},
@@ -471,8 +471,8 @@ func TestReassemble_NoMessageStop(t *testing.T) {
 			Data: mustJSON(t, MessageStartData{
 				Type: EventTypeMessageStart,
 				Message: MessageMeta{
-					ID:             testMsgID,
-					ConversationID: testConvID,
+					ID:       testMsgID,
+					StreamID: testStreamID,
 				},
 			}),
 		},
@@ -516,7 +516,7 @@ func TestReassemble_NoMessageStop(t *testing.T) {
 	got := Reassemble(context.Background(), NewSliceSource(events))
 
 	assert.Empty(t, got.Error)
-	assert.Equal(t, testConvID, got.ConversationID)
+	assert.Equal(t, testStreamID, got.StreamID)
 	assert.Equal(t, "partial", got.Text)
 	assert.Equal(t, []string{testToolNameSearch}, got.ToolNames)
 	assert.Empty(t, got.Executions)

@@ -12,13 +12,13 @@ import (
 
 // ParsedStream is the structured reconstruction of a full streamed turn.
 type ParsedStream struct {
-	ConversationID string
-	Text           string
-	ToolNames      []string
-	Tools          []ToolCall
-	Executions     []ToolExecution
-	Timeline       []TimelineItem
-	Error          string
+	StreamID   string
+	Text       string
+	ToolNames  []string
+	Tools      []ToolCall
+	Executions []ToolExecution
+	Timeline   []TimelineItem
+	Error      string
 }
 
 // Reassemble drains src and reconstructs a full streamed turn: accumulated
@@ -136,7 +136,7 @@ func (r *reassembler) onMessageStart(
 		return
 	}
 
-	r.result.ConversationID = msg.Message.ConversationID
+	r.result.StreamID = msg.Message.StreamID
 }
 
 func (r *reassembler) onContentBlockStart(

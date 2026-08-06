@@ -44,7 +44,8 @@ func (s *Sink) Emit(ctx context.Context, ev essessey.Event) error {
 		return ctxerrors.Wrap(err, "publish event")
 	}
 
-	logger.Debug("published event",
+	logger.Debug(
+		"published event",
 		"subject", subject,
 		"event", ev.Event,
 	)

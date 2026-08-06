@@ -120,24 +120,29 @@ func blockDeltaFields(
 	}
 }
 
-// SendMessageStart emits message_start, carrying the conversation id so the
-// client learns a newly-created conversation's id from the stream itself.
+// SendMessageStart emits message_start, carrying the stream id so the client
+// learns a newly-created stream's id from the stream itself.
+//
+// streamID is the caller's own identifier for whatever this stream represents —
+// a conversation, a job, a document build. essessey never mints one and only
+// echoes it back; it is also the natural key to retain the stream under in an
+// EventStore, so the same value passed here goes to EventStore.SinkFor.
 func (p *Publisher) SendMessageStart(
-	msgID, conversationID, model string,
+	msgID, streamID, model string,
 ) error {
 	return p.Publish(
 		EventTypeMessageStart,
 		MessageStartData{
 			Type: EventTypeMessageStart,
 			Message: MessageMeta{
-				ID:             msgID,
-				ConversationID: conversationID,
-				Type:           MessageTypeMessage,
-				Role:           RoleAssistant,
-				Content:        []any{},
-				Model:          model,
-				StopReason:     nil,
-				StopSequence:   nil,
+				ID:           msgID,
+				StreamID:     streamID,
+				Type:         MessageTypeMessage,
+				Role:         RoleAssistant,
+				Content:      []any{},
+				Model:        model,
+				StopReason:   nil,
+				StopSequence: nil,
 				Usage: UsageStart{
 					InputTokens:  0,
 					OutputTokens: 0,
@@ -328,9 +333,9 @@ func (p *Publisher) SendToolResultDelta(index int, text string) error {
 
 // SendStreamPreamble emits message_start + ping to open a stream.
 func (p *Publisher) SendStreamPreamble(
-	msgID, conversationID, model string,
+	msgID, streamID, model string,
 ) error {
-	if err := p.SendMessageStart(msgID, conversationID, model); err != nil {
+	if err := p.SendMessageStart(msgID, streamID, model); err != nil {
 		return ctxerrors.Wrap(err, "send stream preamble")
 	}
 

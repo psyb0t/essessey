@@ -470,7 +470,8 @@ func TestFrameComment(t *testing.T) {
 	assert.Equal(t, ": keep-alive\n", FrameComment("keep-alive"))
 
 	// A comment must not be able to break out of its own line.
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		": aevent: forged\n",
 		FrameComment("a\nevent: forged"),
 	)

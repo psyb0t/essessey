@@ -40,7 +40,7 @@ the answer starts, and gluing a stream back together at the other end.
 sink := essessey.NewInMemorySink() // or sse.NewWriterSink(w), nats.NewSink(conn, "turn"), ws.NewSink(conn)
 pub := essessey.NewPublisher(ctx, sink)
 
-if err := pub.SendStreamPreamble(msgID, conversationID, model); err != nil {
+if err := pub.SendStreamPreamble(msgID, streamID, model); err != nil {
 	return err
 }
 
@@ -134,7 +134,7 @@ fmt.Println(parsed.Timeline)   // text and tool activity, in the order it happen
 
 `ParsedStream` also carries `Tools` (each call matched to its result by content
 block index — the bookkeeping this package exists to do for you), `Executions`,
-`ConversationID`, and `Error` if the stream carried one.
+`StreamID`, and `Error` if the stream carried one.
 
 If you do want the raw events, a `Source` is just an iterator:
 
@@ -261,9 +261,9 @@ Four things worth knowing before wiring it up:
 - **Replay through the wire sink alone, never the `MultiSink`** — otherwise each
   reconnect re-appends what it is replaying and the store grows without bound.
 - **`streamID` is a security boundary.** Replay keyed only by event id would let
-  a client presenting an id receive someone else's events. Scope it per
-  conversation and authorize the resume exactly as you authorize opening the
-  stream.
+  a client presenting an id receive someone else's events. On reconnect the
+  `streamID` arrives from the client, so authorize the resume exactly as you
+  authorize opening the stream — `Since` only knows map keys, not owners.
 - **Events without an id are still replayed**, they just cannot be resumed TO.
   Dropping them would silently skip real content.
 - **An id-less frame still moves a client's resume point.** The format sets the

@@ -18,6 +18,18 @@ var ErrInvalidCapacity = errors.New("capacity must be positive")
 // EventStore retains recent events per stream so a client that reconnects can
 // resume from where it left off.
 //
+// streamID is the same identifier Publisher.SendMessageStart puts on the wire
+// as MessageMeta.StreamID — whatever the caller's domain calls one stream (a
+// conversation, a job, a document build). essessey never mints it; it is an
+// opaque key. Nothing forces the two to match, and keying retention at a
+// finer grain (per turn, per connection) is a legitimate choice that trades a
+// smaller buffer for losing replay of earlier turns. Using the id the client
+// already learned from message_start is the common case.
+//
+// It is also untrusted on the way back in: a reconnecting client supplies the
+// streamID, and Since resolves it as a map key without any notion of who owns
+// it. Authorize the resume exactly as you authorize opening the stream.
+//
 // The read side deliberately reports whether the resume point is KNOWN instead
 // of guessing. If an id has aged out, or never existed, neither available
 // answer is safe: replaying from the start duplicates everything the client
