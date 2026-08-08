@@ -5,6 +5,7 @@
 [![coverage](https://raw.githubusercontent.com/psyb0t/essessey/badges/coverage.svg)](https://github.com/psyb0t/essessey/actions/workflows/pipeline.yml)
 [![version](https://raw.githubusercontent.com/psyb0t/essessey/badges/version.svg)](https://github.com/psyb0t/essessey/tags)
 [![license](https://raw.githubusercontent.com/psyb0t/essessey/badges/license.svg)](LICENSE)
+[![imported by](https://raw.githubusercontent.com/psyb0t/essessey/badges/importers.svg)](https://github.com/psyb0t/essessey/blob/badges/importers.md)
 
 Say the letters out loud. That's the name. S-S-E.
 
