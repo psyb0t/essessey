@@ -3,8 +3,8 @@ package nats
 import (
 	"context"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 	"github.com/psyb0t/essessey"
 )
 
@@ -36,7 +36,7 @@ func NewSink(p Publisher, subjectPrefix string) *Sink {
 // Emit publishes ev.Data, unframed, to the subject derived from the
 // configured prefix and ev.Event.
 func (s *Sink) Emit(ctx context.Context, ev essessey.Event) error {
-	logger := scope.GetLogger(ctx)
+	logger := ctxscope.GetLogger(ctx)
 
 	subject := s.subject(ev.Event)
 

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 )
 
 // ParsedStream is the structured reconstruction of a full streamed turn.
@@ -127,7 +127,7 @@ func (r *reassembler) onMessageStart(
 ) {
 	var msg MessageStartData
 	if err := json.Unmarshal(data, &msg); err != nil {
-		scope.GetLogger(ctx).Warn(
+		ctxscope.GetLogger(ctx).Warn(
 			"reassemble: malformed message_start, dropping event",
 			"err", err,
 			"reason", "malformed_event",
@@ -143,7 +143,7 @@ func (r *reassembler) onContentBlockStart(
 	ctx context.Context,
 	data json.RawMessage,
 ) {
-	logger := scope.GetLogger(ctx)
+	logger := ctxscope.GetLogger(ctx)
 
 	// Need the index up front; never silently route to 0 — it would
 	// collide with a real block at index 0 in the text-block fallthrough
@@ -203,7 +203,7 @@ func (r *reassembler) startTextOrUnknown(
 	}
 
 	if err := json.Unmarshal(data, &generic); err != nil {
-		scope.GetLogger(ctx).Warn(
+		ctxscope.GetLogger(ctx).Warn(
 			"reassemble: malformed content_block, dropping event",
 			"err", err,
 			"reason", "malformed_event",
@@ -216,7 +216,7 @@ func (r *reassembler) startTextOrUnknown(
 	case ContentBlockTypeText, "":
 		r.textIndex = index
 	default:
-		scope.GetLogger(ctx).Warn(
+		ctxscope.GetLogger(ctx).Warn(
 			"reassemble: unknown content_block type, dropping event",
 			"type", generic.ContentBlock.Type,
 			"index", index,
@@ -229,7 +229,7 @@ func (r *reassembler) onContentBlockDelta(
 	ctx context.Context,
 	data json.RawMessage,
 ) {
-	logger := scope.GetLogger(ctx)
+	logger := ctxscope.GetLogger(ctx)
 
 	var textDelta ContentBlockDeltaData
 	if json.Unmarshal(data, &textDelta) == nil &&
@@ -287,7 +287,7 @@ func (r *reassembler) onContentBlockStop(
 ) {
 	var stop ContentBlockStopData
 	if err := json.Unmarshal(data, &stop); err != nil {
-		scope.GetLogger(ctx).Warn(
+		ctxscope.GetLogger(ctx).Warn(
 			"reassemble: malformed content_block_stop, dropping event",
 			"err", err,
 			"reason", "malformed_event",
@@ -317,7 +317,7 @@ func (r *reassembler) onContentBlockStop(
 		return
 	}
 
-	scope.GetLogger(ctx).Warn(
+	ctxscope.GetLogger(ctx).Warn(
 		"reassemble: orphan content_block_stop, no open block",
 		"index", stop.Index,
 		"reason", "orphan_stop",
@@ -401,7 +401,7 @@ func (r *reassembler) finalizeResult(
 
 	// No matching tool_use (truncated upstream / cross-stream rejoin).
 	// Drop rather than fabricate an Execution missing Name/Params.
-	scope.GetLogger(ctx).Warn(
+	ctxscope.GetLogger(ctx).Warn(
 		"reassemble: tool_result has no matching tool_use",
 		"tool_use_id", res.toolUseID,
 		"result_len", len(resultText),

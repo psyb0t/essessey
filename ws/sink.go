@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 	"github.com/psyb0t/essessey"
 )
 
@@ -30,7 +30,7 @@ func NewSink(c Conn) *Sink {
 
 // Emit writes ev to the connection as a single JSON message.
 func (s *Sink) Emit(ctx context.Context, ev essessey.Event) error {
-	logger := scope.GetLogger(ctx)
+	logger := ctxscope.GetLogger(ctx)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

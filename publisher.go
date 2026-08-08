@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 )
 
 // logFieldIndex names the content-block index in structured log fields.
@@ -63,7 +63,7 @@ func (p *Publisher) Publish(eventType EventType, data any) error {
 func logEvent(ctx context.Context, eventType EventType, data any) {
 	fields := append([]any{"event", eventType}, logFields(data)...)
 
-	scope.GetLogger(ctx).Debug("essessey event", fields...)
+	ctxscope.GetLogger(ctx).Debug("essessey event", fields...)
 }
 
 // logFields returns the fields that vary by payload shape.

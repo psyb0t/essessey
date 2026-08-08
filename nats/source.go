@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 	"github.com/psyb0t/essessey"
 )
 
@@ -34,7 +34,7 @@ func (s *Source) Deliver(ev essessey.Event) {
 	defer s.mu.Unlock()
 
 	if s.closed {
-		scope.GetLogger(context.Background()).Warn(
+		ctxscope.GetLogger(context.Background()).Warn(
 			"dropping delivered event, source is closed",
 			"event", ev.Event,
 			"reason", "source_closed",

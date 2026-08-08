@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/psyb0t/common-go/scope"
 	"github.com/psyb0t/ctxerrors"
+	"github.com/psyb0t/ctxscope"
 	"github.com/psyb0t/essessey"
 )
 
@@ -152,7 +152,7 @@ func (s *Source) consumeField(ctx context.Context, name, value string) {
 // malformed id cannot destroy a resume point that was already valid.
 func (s *Source) consumeID(ctx context.Context, value string) {
 	if strings.ContainsRune(value, 0) {
-		scope.GetLogger(ctx).Warn(
+		ctxscope.GetLogger(ctx).Warn(
 			"sse source: ignoring id containing NUL",
 			"reason", "invalid_id",
 		)
@@ -166,7 +166,7 @@ func (s *Source) consumeID(ctx context.Context, value string) {
 // consumeRetry records a reconnection delay, ignoring anything that is not a
 // plain run of ASCII digits.
 func (s *Source) consumeRetry(ctx context.Context, value string) {
-	logger := scope.GetLogger(ctx)
+	logger := ctxscope.GetLogger(ctx)
 
 	if !isASCIIDigits(value) {
 		logger.Warn(
@@ -225,7 +225,7 @@ func (s *Source) dropIncomplete(ctx context.Context) {
 		return
 	}
 
-	scope.GetLogger(ctx).Warn(
+	ctxscope.GetLogger(ctx).Warn(
 		"sse source: dropping unterminated event at end of stream",
 		"event", s.eventType,
 		"reason", "incomplete_event",

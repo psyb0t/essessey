@@ -145,8 +145,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/ckaznocha/intrange v0.3.1 h1:j1onQyXvHUsPWujDH6WIjhyH26gkRt/txNlV7LspvJs=
 github.com/ckaznocha/intrange v0.3.1/go.mod h1:QVepyz1AkUoFQkpEqksSYpNpUo3c5W7nWh/s6SHIJJk=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/clipperhouse/uax29/v2 v2.2.0 h1:ChwIKnQN3kcZteTXMgb1wztSgaU+ZemkgWdohwgs8tY=
-github.com/clipperhouse/uax29/v2 v2.2.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
+github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=
+github.com/clipperhouse/uax29/v2 v2.7.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/curioswitch/go-reassign v0.3.0 h1:dh3kpQHuADL3cobV/sSGETA8DOv457dwl+fbBAhrQPs=
@@ -494,8 +494,10 @@ github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/psyb0t/common-go v0.3.2 h1:qMJn2LjJ4572M07g0x/78xiNXGlGl3M/JP+AMA+uXMU=
 github.com/psyb0t/common-go v0.3.2/go.mod h1:TAGH40yFoYeEoETZBjCC8H88yz1Xq8s/5bUFBhIhf0o=
-github.com/psyb0t/ctxerrors v0.4.3 h1:GqtjawHgNIwIonPrXk2Wmc0O/EPRpvgXMpTh9X18CU4=
-github.com/psyb0t/ctxerrors v0.4.3/go.mod h1:h1V0vJtlXGn4H7RuHBtxdrdevBx3CmBTEyJXtFIIrk4=
+github.com/psyb0t/ctxerrors v0.4.4 h1:JrM8WBzwdvbZ9/JKGFqWvZODFAjRXR23czchFWBFUpw=
+github.com/psyb0t/ctxerrors v0.4.4/go.mod h1:h1V0vJtlXGn4H7RuHBtxdrdevBx3CmBTEyJXtFIIrk4=
+github.com/psyb0t/ctxscope v1.0.2 h1:EDWv8k+HO9qxo8fjKLz2kcwpGJqPHuWVgAQokgO8gIM=
+github.com/psyb0t/ctxscope v1.0.2/go.mod h1:fP6HYWnSze45KVPceVdMRbupfK9ly/m6c5+DknmUYTU=
 github.com/psyb0t/elelem v0.4.1 h1:ZPYXcHDaQCf3ftPbgCgXpFBfBlr4NGYRxxN1toZrnII=
 github.com/psyb0t/elelem v0.4.1/go.mod h1:UBL43xGRnW7I8+qu1TdUAxxG8hpWcPIt1wYG82R7Xm8=
 github.com/quasilyte/go-ruleguard v0.4.5 h1:AGY0tiOT5hJX9BTdx/xBdoCubQUAE2grkqY2lSwvZcA=
