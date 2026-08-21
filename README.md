@@ -334,12 +334,16 @@ elelemstream/                  elelem callbacks -> block protocol (imports elele
 
 ## Development
 
+Every target runs inside the `Dockerfile.dev` image, so a clean host needs
+Docker rather than a curated Go toolchain.
+
 ```bash
 make dep           # tidy the module and re-vendor
 make lint          # go fix, then golangci-lint at full strictness
 make lint-fix      # the same, applying whatever it can fix itself
 make test          # the suite, always with -race
 make test-coverage # the suite plus the coverage floor CI enforces
+make sec           # govulncheck + semgrep, merged into sec.sarif
 make help          # the rest of it
 ```
 
