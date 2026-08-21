@@ -4,6 +4,23 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.7.3 — 2026-08-21
+
+Build and CI change. No API change.
+
+Moves the pipeline to the container-backed `code-workflow` and pins the Go
+toolchain in a dev image, which clears the stale-toolchain standard-library
+vulnerability (GO-2026-5972) that the loose `setup-go` pin exposed on the
+scheduled scan.
+
+- Added `Dockerfile.dev` (Go 1.26.6, govulncheck, semgrep) and routed
+  `make lint`, `make test-coverage`, and the new `make sec` through it.
+- `pipeline.yml` now calls `code-workflow` with a govulncheck plus semgrep
+  security gate and SARIF upload, replacing `go-workflow`.
+- Anchored the coverage ignore rule to the repository root so it no longer hid
+  `scripts/test-coverage.sh` or the vendored `x/text` `coverage.go` files; those
+  files are now tracked, so a vendored build is complete.
+
 ## v0.7.2 — 2026-08-08
 
 Dependency migration. No API change.

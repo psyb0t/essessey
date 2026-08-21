@@ -1,7 +1,10 @@
 .vscode
 .env
-*coverage.*
+# Root-anchored so it hides the generated coverage.txt/out but NOT the tracked
+# scripts/test-coverage.sh helper.
+/coverage.*
 *.out
+sec.sarif
 CLAUDE.md
 .test*
 .research_files
