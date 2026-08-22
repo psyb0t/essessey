@@ -23,7 +23,6 @@ jobs:
     permissions:
       contents: read
       security-events: write # upload sec.sarif to the Security tab
-      actions: read # codeql upload-sarif reads the run to attach the analysis
     uses: psyb0t/reusable-github-workflows/.github/workflows/code-workflow.yml@master
     with:
       lint_command: "make lint"
@@ -45,3 +44,12 @@ jobs:
     with:
       coverage: true
       importers: true
+
+  # Cut a GitHub Release on tag pushes once the checks pass (go-workflow did this
+  # inline; code-workflow leaves it to this reusable job).
+  release:
+    needs: [call-code-workflow]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    uses: psyb0t/reusable-github-workflows/.github/workflows/release-workflow.yml@master

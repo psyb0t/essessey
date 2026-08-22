@@ -4,6 +4,16 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.7.4 — 2026-08-22
+
+CI change. No API change.
+
+- Restored the GitHub Release on tag pushes. The move to `code-workflow` dropped
+  the release step that `go-workflow` ran inline; a `release` job now calls the
+  reusable `release-workflow` once the checks pass on a tag.
+- Removed the leftover `actions: read` grant, which the reusable `code-workflow`
+  no longer requests.
+
 ## v0.7.3 — 2026-08-21
 
 Build and CI change. No API change.
