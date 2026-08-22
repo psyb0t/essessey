@@ -27,9 +27,6 @@ jobs:
     with:
       lint_command: "make lint"
       test_command: "make test-coverage"
-      # Full security scan (govulncheck + semgrep) merged into sec.sarif, run in
-      # the dev image. Gates on findings; the dev image pins Go 1.26.6, so the
-      # stale-toolchain stdlib CVE a loose setup-go pin exposed is gone.
       sec_command: "make sec"
       coverage_file: "coverage-percent.txt"
       sarif_file: "sec.sarif"
