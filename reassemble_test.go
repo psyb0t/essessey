@@ -3,6 +3,7 @@ package essessey
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,24 @@ const (
 	testToolNameSearch = "search"
 	testToolNameCalc   = "calc"
 )
+
+var errTestSourceRead = errors.New("test source read failure")
+
+type sourceThatFails struct {
+	events []Event
+	next   int
+}
+
+func (source *sourceThatFails) Next(_ context.Context) (Event, error) {
+	if source.next >= len(source.events) {
+		return Event{}, errTestSourceRead
+	}
+
+	event := source.events[source.next]
+	source.next++
+
+	return event, nil
+}
 
 // mustJSON marshals v and fails the test on error.
 func mustJSON(t *testing.T, v any) json.RawMessage {
@@ -107,6 +126,7 @@ func TestReassemble_TextOnly(t *testing.T) {
 	got := Reassemble(context.Background(), NewSliceSource(events))
 
 	assert.Equal(t, testStreamID, got.StreamID)
+	assert.Empty(t, got.Thinking)
 	assert.Equal(t, "Hello world", got.Text)
 	assert.Empty(t, got.Error)
 	assert.Empty(t, got.Tools)
@@ -115,6 +135,250 @@ func TestReassemble_TextOnly(t *testing.T) {
 	require.Len(t, got.Timeline, 1)
 	assert.Equal(t, TimelineKindText, got.Timeline[0].Kind)
 	assert.Equal(t, "Hello world", got.Timeline[0].Text)
+}
+
+func TestReassemble_CompleteProtocolWithThinking(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	sink := NewInMemorySink()
+	publisher := NewPublisher(ctx, sink)
+
+	require.NoError(t, publisher.SendStreamPreamble(
+		testMsgID, testStreamID, "test-model",
+	))
+	require.NoError(t, publisher.SendContentBlockStartThinking(0))
+	require.NoError(t, publisher.SendContentBlockDeltaThinking(
+		0, "inspect the request; ",
+	))
+	require.NoError(t, publisher.SendContentBlockDeltaThinking(
+		0, "call the tool",
+	))
+	require.NoError(t, publisher.SendContentBlockStop(0))
+
+	require.NoError(t, publisher.SendContentBlockStartText(1))
+	require.NoError(t, publisher.SendContentBlockDeltaText(1, "Checking. "))
+	require.NoError(t, publisher.SendContentBlockStop(1))
+	require.NoError(t, publisher.SendToolUseBlock(
+		2, testToolID1, testToolNameSearch, `{"q":"weather"}`,
+	))
+	require.NoError(t, publisher.SendToolResultBlock(
+		3, testToolID1, "clear", false,
+	))
+
+	require.NoError(t, publisher.SendContentBlockStartThinking(4))
+	require.NoError(t, publisher.SendContentBlockDeltaThinking(
+		4, "write the answer",
+	))
+	require.NoError(t, publisher.SendContentBlockStop(4))
+	require.NoError(t, publisher.SendContentBlockStartText(5))
+	require.NoError(t, publisher.SendContentBlockDeltaText(5, "Done."))
+	require.NoError(t, publisher.SendContentBlockStop(5))
+	require.NoError(t, publisher.SendStreamEpilogue(StopReasonEndTurn, 7))
+
+	got := Reassemble(ctx, NewSliceSource(sink.Events()))
+
+	assert.Empty(t, got.Error)
+	assert.Equal(t, testStreamID, got.StreamID)
+	assert.Equal(
+		t,
+		"inspect the request; call the toolwrite the answer",
+		got.Thinking,
+	)
+	assert.Equal(t, "Checking. Done.", got.Text)
+	assert.Equal(t, []string{testToolNameSearch}, got.ToolNames)
+
+	require.Len(t, got.Tools, 1)
+	assert.Equal(t, testToolNameSearch, got.Tools[0].Name)
+	assert.Equal(t, testToolID1, got.Tools[0].ToolUseID)
+	assert.JSONEq(t, `{"q":"weather"}`, string(got.Tools[0].Params))
+
+	require.Len(t, got.Executions, 1)
+	assert.Equal(t, testToolNameSearch, got.Executions[0].Name)
+	assert.Equal(t, "clear", got.Executions[0].Result)
+	assert.Equal(t, testToolID1, got.Executions[0].ToolUseID)
+
+	require.Len(t, got.Timeline, 5)
+	assert.Equal(t, TimelineKindThinking, got.Timeline[0].Kind)
+	assert.Equal(t, "inspect the request; call the tool", got.Timeline[0].Text)
+	assert.Equal(t, TimelineKindText, got.Timeline[1].Kind)
+	assert.Equal(t, "Checking. ", got.Timeline[1].Text)
+	assert.Equal(t, TimelineKindTool, got.Timeline[2].Kind)
+	require.NotNil(t, got.Timeline[2].Execution)
+	assert.Equal(t, testToolID1, got.Timeline[2].Execution.ToolUseID)
+	assert.Equal(t, TimelineKindThinking, got.Timeline[3].Kind)
+	assert.Equal(t, "write the answer", got.Timeline[3].Text)
+	assert.Equal(t, TimelineKindText, got.Timeline[4].Kind)
+	assert.Equal(t, "Done.", got.Timeline[4].Text)
+}
+
+func TestReassemble_ThinkingBlockWithoutStop(t *testing.T) {
+	t.Parallel()
+
+	events := []Event{
+		{
+			Event: EventTypeContentBlockStart,
+			Data: mustJSON(t, ContentBlockStartData{
+				Type:  EventTypeContentBlockStart,
+				Index: 0,
+				ContentBlock: ContentBlock{
+					Type: ContentBlockTypeThinking,
+				},
+			}),
+		},
+		{
+			Event: EventTypeContentBlockDelta,
+			Data: mustJSON(t, ContentBlockDeltaData{
+				Type:  EventTypeContentBlockDelta,
+				Index: 0,
+				Delta: TextDelta{
+					Type: ContentBlockTypeThinkingDelta,
+					Text: "partial reasoning",
+				},
+			}),
+		},
+	}
+
+	got := Reassemble(context.Background(), NewSliceSource(events))
+
+	assert.Empty(t, got.Error)
+	assert.Equal(t, "partial reasoning", got.Thinking)
+	assert.Empty(t, got.Text)
+	require.Len(t, got.Timeline, 1)
+	assert.Equal(t, TimelineKindThinking, got.Timeline[0].Kind)
+	assert.Equal(t, "partial reasoning", got.Timeline[0].Text)
+}
+
+func TestReassemble_EmptyThinkingDoesNotCreateTimelineEntry(t *testing.T) {
+	t.Parallel()
+
+	events := []Event{
+		{
+			Event: EventTypeContentBlockStart,
+			Data: mustJSON(t, ContentBlockStartData{
+				Type:  EventTypeContentBlockStart,
+				Index: 0,
+				ContentBlock: ContentBlock{
+					Type: ContentBlockTypeThinking,
+				},
+			}),
+		},
+		{
+			Event: EventTypeContentBlockDelta,
+			Data: mustJSON(t, ContentBlockDeltaData{
+				Type:  EventTypeContentBlockDelta,
+				Index: 0,
+				Delta: TextDelta{
+					Type: ContentBlockTypeThinkingDelta,
+				},
+			}),
+		},
+		{
+			Event: EventTypeContentBlockStop,
+			Data: mustJSON(t, ContentBlockStopData{
+				Type:  EventTypeContentBlockStop,
+				Index: 0,
+			}),
+		},
+	}
+
+	got := Reassemble(context.Background(), NewSliceSource(events))
+
+	assert.Empty(t, got.Thinking)
+	assert.Empty(t, got.Timeline)
+}
+
+func TestReassemble_InvalidThinkingEventsAreDropped(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		events []Event
+	}{
+		{
+			name: "orphan delta",
+			events: []Event{
+				{
+					Event: EventTypeContentBlockDelta,
+					Data: mustJSON(t, ContentBlockDeltaData{
+						Type:  EventTypeContentBlockDelta,
+						Index: 0,
+						Delta: TextDelta{
+							Type: ContentBlockTypeThinkingDelta,
+							Text: "not accepted",
+						},
+					}),
+				},
+			},
+		},
+		{
+			name: "malformed start",
+			events: []Event{
+				{
+					Event: EventTypeContentBlockStart,
+					Data:  json.RawMessage(`{not valid json`),
+				},
+			},
+		},
+		{
+			name: "malformed delta",
+			events: []Event{
+				{
+					Event: EventTypeContentBlockDelta,
+					Data:  json.RawMessage(`{not valid json`),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := Reassemble(context.Background(), NewSliceSource(tc.events))
+
+			assert.Empty(t, got.Error)
+			assert.Empty(t, got.Thinking)
+			assert.Empty(t, got.Text)
+			assert.Empty(t, got.Timeline)
+		})
+	}
+}
+
+func TestReassemble_SourceErrorPreservesThinking(t *testing.T) {
+	t.Parallel()
+
+	source := &sourceThatFails{events: []Event{
+		{
+			Event: EventTypeContentBlockStart,
+			Data: mustJSON(t, ContentBlockStartData{
+				Type:  EventTypeContentBlockStart,
+				Index: 0,
+				ContentBlock: ContentBlock{
+					Type: ContentBlockTypeThinking,
+				},
+			}),
+		},
+		{
+			Event: EventTypeContentBlockDelta,
+			Data: mustJSON(t, ContentBlockDeltaData{
+				Type:  EventTypeContentBlockDelta,
+				Index: 0,
+				Delta: TextDelta{
+					Type: ContentBlockTypeThinkingDelta,
+					Text: "keep this",
+				},
+			}),
+		},
+	}}
+
+	got := Reassemble(context.Background(), source)
+
+	assert.Contains(t, got.Error, "read next event")
+	assert.Contains(t, got.Error, errTestSourceRead.Error())
+	assert.Equal(t, "keep this", got.Thinking)
+	require.Len(t, got.Timeline, 1)
+	assert.Equal(t, TimelineKindThinking, got.Timeline[0].Kind)
 }
 
 func TestReassemble_ToolUseAndResult(t *testing.T) {
