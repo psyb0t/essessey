@@ -48,7 +48,7 @@ Data flow, producing: caller -> `TextStreamer`/`Publisher` (or `elelemstream.Ada
 | `.github/workflows/pipeline.yml` | CI: lint, tests and security scan on every push, release and badges on tags |
 | `vendor/` | committed vendored dependencies; never edit by hand |
 
-`docs/` is a Jekyll site with the just-the-docs theme. Every page needs front matter with a unique `title` and a `description` of 50 to 170 characters. Page-to-page links use the relative `.md` path; a link to a file outside `docs/` uses the full `https://github.com/psyb0t/essessey/blob/main/...` URL. The package READMEs are short pointers to their pages.
+`docs/` is a Jekyll site with the just-the-docs theme. The package READMEs (`sse/`, `nats/`, `ws/`, `elelemstream/`) are short pointers to their pages. `make docs` writes the built site to `DOCS_SITE` in the `Makefile`, which is gitignored.
 
 ## Commands
 
