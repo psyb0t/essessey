@@ -21,7 +21,7 @@ DEV_RUN := docker run --rm --init \
 	-w /app \
 	$(DEV_IMAGE)
 
-.PHONY: all dev-image dep generate lint lint-fix test test-coverage sec clean help
+.PHONY: all dev-image dep generate lint lint-fix test test-coverage sec docs clean help
 
 all: dep lint test ## Run dep, lint and test
 
@@ -60,6 +60,23 @@ test-coverage: dev-image ## Run tests with coverage check. Fails if coverage is 
 
 sec: dev-image ## Security scan (govulncheck + semgrep). Fails on any finding.
 	@$(DEV_RUN) bash scripts/sec.sh
+
+# Builds docs/ with the image GitHub Pages uses, so the local result matches
+# the published site. The output directory is gitignored.
+DOCS_SITE ?= .testing/docs-site
+
+docs: ## Build the documentation site locally (gitignored output)
+	@mkdir -p "$(DOCS_SITE)"
+	@docker run --rm \
+		--user $(UID):$(GID) \
+		-e HOME=/tmp \
+		-e GITHUB_WORKSPACE=/work \
+		-e GITHUB_REPOSITORY=psyb0t/essessey \
+		-e INPUT_SOURCE=docs \
+		-e INPUT_DESTINATION="$(DOCS_SITE)" \
+		-e INPUT_VERBOSE=false \
+		-v "$(CURDIR):/work" \
+		ghcr.io/actions/jekyll-build-pages:v1.0.13@sha256:6791ebfd912185ed59bfb5fb102664fa872496b79f87ff8b9cfba292a7345041
 
 clean: ## Remove coverage artifacts
 	@echo "Cleaning..."

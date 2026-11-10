@@ -4,6 +4,14 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.7.6 — 2026-11-10
+
+Documentation and CI. No API change.
+
+- The documentation now lives at https://psyb0t.github.io/essessey/, and the reference material moved there from the README and the package READMEs.
+- A tag no longer reruns the checks. It waits for the main run of the same commit to pass, cuts the GitHub release from the tag message, and the badges use that run's coverage.
+- Added Buy Me a Coffee to the funding links, and committed `AGENTS.md` plus the project rules in `.agents/rules/` for coding agents.
+
 ## v0.7.5 — 2026-09-09
 
 Bug fix. No breaking API change.
