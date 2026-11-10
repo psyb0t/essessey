@@ -6,7 +6,7 @@ nav_order: 9
 
 # Development
 
-Hacking on essessey itself. Every target runs inside the [`Dockerfile.dev`](https://github.com/psyb0t/essessey/blob/main/Dockerfile.dev) image, so a clean host needs Docker and Make rather than a curated Go toolchain. The image pins Go 1.26.6, govulncheck and semgrep; the checkout is mounted at run time, so the image is reused without a rebuild per change.
+Hacking on essessey itself. Every target runs inside the [`Dockerfile.dev`](https://github.com/psyb0t/essessey/blob/main/Dockerfile.dev) image, so a clean host needs Docker and Make rather than a curated Go toolchain. The image pins Go 1.26.10, govulncheck and semgrep; the checkout is mounted at run time, so the image is reused without a rebuild per change.
 
 ## Make targets
 

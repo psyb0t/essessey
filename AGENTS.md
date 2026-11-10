@@ -24,7 +24,7 @@ Data flow, producing: caller -> `TextStreamer`/`Publisher` (or `elelemstream.Ada
 
 ## Stack
 
-- Go: `go 1.26.0` minimum in `go.mod`; the dev image pins `golang:1.26.6-alpine` by digest in `Dockerfile.dev`.
+- Go: `go 1.26.0` minimum in `go.mod`; the dev image pins `golang:1.26.10-alpine` by digest in `Dockerfile.dev`.
 - Runtime dependencies: `github.com/psyb0t/ctxerrors` (error wrapping), `github.com/psyb0t/ctxscope` (context logger), `github.com/psyb0t/elelem` (`elelemstream` only). Tests use testify.
 - golangci-lint v2 is a `tool` dependency in `go.mod`, run as `go tool golangci-lint`. Dependencies are vendored in `vendor/`, and the vendor tree is committed.
 - Security scan: govulncheck v1.6.0 and semgrep 1.173.0, both installed in `Dockerfile.dev`.

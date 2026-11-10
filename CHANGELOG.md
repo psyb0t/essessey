@@ -4,6 +4,10 @@ All notable changes per release. Versions follow [semver](https://semver.org)
 pre-1.0 conventions: minor bumps may include breaking API changes (called out
 explicitly), patch bumps are docs / build / fixes only.
 
+## v0.7.7 — 2026-11-10
+
+- The development image moves to Go 1.26.10, which fixes standard library vulnerabilities the security scan reported. v0.7.6 never published because that scan failed; its changes ship in this release.
+
 ## v0.7.6 — 2026-11-10
 
 Documentation and CI. No API change.
